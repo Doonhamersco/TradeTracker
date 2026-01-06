@@ -337,7 +337,7 @@ function HomePage() {
               <h1 className="text-4xl md:text-5xl font-bold mb-2 text-white">
                 Trade Tracker by Doonhamer
               </h1>
-              <p className="text-gray-400 text-lg">Solana Trade Tracking Application</p>
+              <p className="text-gray-400 text-lg">Manually track your trades and PNL</p>
             </div>
             <div className="flex-1 flex justify-end">
               <ProfileDropdown
