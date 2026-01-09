@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redirecting...</title>
+  <script>
+    // Extract action code from Firebase's action URL and redirect to our custom page
+    (function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const mode = urlParams.get('mode');
+      const oobCode = urlParams.get('oobCode');
+      const apiKey = urlParams.get('apiKey');
+      const continueUrl = urlParams.get('continueUrl');
+      
+      if (mode === 'resetPassword' && oobCode) {
+        // Redirect to our custom reset page with the action code
+        const baseUrl = continueUrl ? new URL(continueUrl).origin : window.location.origin;
+        const redirectUrl = baseUrl + '/reset-password?mode=' + encodeURIComponent(mode) + '&oobCode=' + encodeURIComponent(oobCode);
+        window.location.href = redirectUrl;
+      } else {
+        // Fallback: redirect to login
+        window.location.href = continueUrl || '/login';
+      }
+    })();
+  </script>
+</head>
+<body>
+  <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: system-ui;">
+    <p>Redirecting...</p>
+  </div>
+</body>
+</html>
+

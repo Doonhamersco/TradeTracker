@@ -5,6 +5,7 @@ import LandingPage from './pages/LandingPage'
 import Auth from './components/Auth'
 import HomePage from './pages/HomePage'
 import PNLPage from './pages/PNLPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import BackgroundVideo from './components/BackgroundVideo'
 import { subscribeToUserTrades } from './services/tradesService'
 
@@ -62,6 +63,10 @@ function App() {
           <Route 
             path="/login" 
             element={currentUser ? <Navigate to="/trades" replace /> : <Auth />} 
+          />
+          <Route 
+            path="/reset-password" 
+            element={<ResetPasswordPage />} 
           />
           <Route 
             path="/trades" 

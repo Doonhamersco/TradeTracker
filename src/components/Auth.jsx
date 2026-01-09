@@ -1,24 +1,23 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import ForgotPasswordForm from './ForgotPasswordForm'
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true)
-  const [authMethod, setAuthMethod] = useState('email') // 'email', 'google', 'username'
+  const [authMethod, setAuthMethod] = useState('email') // 'email', 'google'
   
   // Email/Password state
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   
-  // Username state
-  const [username, setUsername] = useState('')
-  
   // UI state
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState('')
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
 
-  const { signup, login, signInWithGoogle, signInWithUsername, signupWithUsername } = useAuth()
+  const { signup, login, signInWithGoogle } = useAuth()
 
   const handleEmailSubmit = async (e) => {
     e.preventDefault()
@@ -46,7 +45,7 @@ const Auth = () => {
     if (isLogin) {
       const result = await login(email, password)
       if (!result.success) {
-        setError(result.error || 'Failed to log in')
+        setError(result.error || 'Provided credentials are invalid.')
       }
     } else {
       const result = await signup(email, password)
@@ -70,47 +69,13 @@ const Auth = () => {
     setLoading(false)
   }
 
-  const handleUsernameSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setSuccess('')
-
-    if (!username.trim()) {
-      setError('Please enter a username')
-      return
-    }
-
-    if (username.length < 3) {
-      setError('Username must be at least 3 characters long')
-      return
-    }
-
-    setLoading(true)
-    
-    if (isLogin) {
-      const result = await signInWithUsername(username)
-      if (!result.success) {
-        setError(result.error || 'Failed to log in')
-      }
-    } else {
-      const result = await signupWithUsername(username)
-      if (!result.success) {
-        setError(result.error || 'Failed to sign up')
-      } else {
-        setSuccess('Account created successfully! You are now logged in.')
-      }
-    }
-    
-    setLoading(false)
-  }
-
   const resetForm = () => {
     setEmail('')
     setPassword('')
     setConfirmPassword('')
-    setUsername('')
     setError('')
     setSuccess('')
+    setShowForgotPassword(false) // Collapse forgot password form when resetting
   }
 
   const switchMode = (mode) => {
@@ -178,16 +143,6 @@ const Auth = () => {
               }`}
             >
               Google
-            </button>
-            <button
-              onClick={() => switchMethod('username')}
-              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-                authMethod === 'username'
-                  ? 'bg-gray-800 text-white border border-gray-700'
-                  : 'bg-gray-800/50 text-gray-400 hover:text-white border border-transparent'
-              }`}
-            >
-              Username
             </button>
           </div>
 
@@ -281,6 +236,20 @@ const Auth = () => {
                   />
                 </div>
               )}
+              
+              {/* Forgot Password Link - Only show on login form */}
+              {isLogin && (
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+              )}
+              
               <button
                 type="submit"
                 disabled={loading}
@@ -291,38 +260,18 @@ const Auth = () => {
             </form>
           )}
 
-          {/* Username Form */}
-          {authMethod === 'username' && (
-            <form onSubmit={handleUsernameSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
-                  Username
-                </label>
-                <input
-                  type="text"
-                  id="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))}
-                  required
-                  minLength={3}
-                  className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500"
-                  placeholder="Choose a username (min 3 characters)"
-                />
-                {!isLogin && (
-                  <p className="mt-1 text-xs text-gray-500">
-                    Letters, numbers, and underscores only
-                  </p>
-                )}
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-              >
-                {loading ? 'Processing...' : isLogin ? 'Log In' : 'Sign Up'}
-              </button>
-            </form>
+          {/* Forgot Password Form */}
+          {authMethod === 'email' && (
+            <ForgotPasswordForm
+              isExpanded={showForgotPassword}
+              onSuccess={(email) => {
+                // Don't collapse immediately - let the success message show
+                // The form will auto-collapse after 8 seconds
+              }}
+              onCancel={() => setShowForgotPassword(false)}
+            />
           )}
+
         </div>
       </div>
     </div>

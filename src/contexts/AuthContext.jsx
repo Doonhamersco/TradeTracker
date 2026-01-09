@@ -50,6 +50,13 @@ export const AuthProvider = ({ children }) => {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       return { success: true, user: userCredential.user }
     } catch (error) {
+      // Check for invalid credential errors
+      if (error.code === 'auth/invalid-credential' || 
+          error.code === 'auth/wrong-password' || 
+          error.code === 'auth/user-not-found' ||
+          error.code === 'auth/invalid-email') {
+        return { success: false, error: 'Provided credentials are invalid.' }
+      }
       return { success: false, error: error.message }
     }
   }

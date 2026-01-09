@@ -313,6 +313,26 @@ function HomePage() {
   return (
     <div className="min-h-screen text-white relative z-10">
       <DollarBillAnimation trigger={celebrateProfit} />
+      
+      {/* Background Video */}
+      <div className="fixed inset-0 w-full h-full -z-10 overflow-hidden">
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 min-w-full min-h-full w-auto h-auto object-cover"
+          style={{ opacity: 0.2 }}
+          onError={(e) => {
+            console.warn('Background video failed to load.')
+            e.target.style.display = 'none'
+          }}
+        >
+          <source src="/trades-vid.mp4" type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+      
       <div className="flex items-start justify-center gap-4 px-4 py-8">
         {/* Left Side Image */}
         <div className="hidden lg:block flex-shrink-0 w-48 xl:w-64 sticky" style={{ top: '200px' }}>
