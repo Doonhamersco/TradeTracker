@@ -355,7 +355,7 @@ function HomePage() {
             <div className="flex-1"></div>
             <div className="flex-1 text-center">
               <h1 className="text-4xl md:text-5xl font-bold mb-2 text-white">
-                Trade Tracker by Doonhamer
+                Trade Tracker
               </h1>
               <p className="text-gray-400 text-lg">Manually track your trades and PNL</p>
             </div>
