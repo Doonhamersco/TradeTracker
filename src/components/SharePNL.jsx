@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Share2, X, Download, Copy } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import { useAuth } from '../contexts/AuthContext'
-import { ref, getDownloadURL, getBytes } from 'firebase/storage'
+import { ref, getDownloadURL } from 'firebase/storage'
 import { storage } from '../firebase/config'
 
 const SharePNL = ({ trade }) => {
@@ -12,6 +12,8 @@ const SharePNL = ({ trade }) => {
   const [imageDimensions, setImageDimensions] = useState({ width: 800, height: 1000 })
   const [backgroundDataUrl, setBackgroundDataUrl] = useState(null)
   const [imageReady, setImageReady] = useState(false)
+  const [generatedImageUrl, setGeneratedImageUrl] = useState(null) // Store the generated image
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false)
   
   // Determine if this is a winning or losing trade
   const isWinning = trade.profitUSD > 0
@@ -49,8 +51,8 @@ const SharePNL = ({ trade }) => {
           return
         }
         
-        // For Firebase Storage URLs, use Firebase SDK to download directly (avoids CORS)
-        let blob = null
+        // For Firebase Storage URLs, use Firebase SDK to get download URL (avoids CORS)
+        let finalUrl = backgroundUrl
         
         // Check if it's a Firebase Storage URL
         if (backgroundUrl.includes('firebasestorage.googleapis.com')) {
@@ -65,82 +67,44 @@ const SharePNL = ({ trade }) => {
           const decodedPath = decodeURIComponent(encodedPath)
           console.log('Extracted Storage path:', decodedPath)
           
-          // Use Firebase Storage SDK to get bytes directly (no CORS issues)
+          // Use Firebase Storage SDK to get a signed download URL (no CORS issues)
           const storageRef = ref(storage, decodedPath)
-          console.log('Downloading image bytes from Firebase Storage using getBytes()...')
+          console.log('Getting download URL from Firebase Storage...')
           
           try {
-            const bytes = await getBytes(storageRef)
-            console.log('Bytes received from Firebase Storage, length:', bytes.length)
-            blob = new Blob([bytes], { type: 'image/png' })
-            console.log('Blob created from Firebase Storage, size:', blob.size, 'type:', blob.type)
-          } catch (getBytesError) {
-            console.error('getBytes() failed:', getBytesError)
-            console.error('Error code:', getBytesError.code)
-            console.error('Error message:', getBytesError.message)
-            
-            // If getBytes fails, try getDownloadURL and then fetch (but this might have CORS)
-            console.log('Trying getDownloadURL as fallback...')
-            try {
-              const downloadURL = await getDownloadURL(storageRef)
-              console.log('Got download URL, now fetching...')
-              const response = await fetch(downloadURL)
-              if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`)
-              }
-              blob = await response.blob()
-              console.log('Blob received from fetch fallback, size:', blob.size)
-            } catch (fallbackError) {
-              console.error('Fallback also failed:', fallbackError)
-              throw new Error(`Failed to load image from Firebase Storage: ${getBytesError.message}. Fallback also failed: ${fallbackError.message}`)
-            }
+            const downloadURL = await getDownloadURL(storageRef)
+            console.log('Got download URL from Firebase Storage')
+            // Use the download URL directly - no need to convert to blob/data URL
+            finalUrl = downloadURL
+          } catch (error) {
+            console.error('getDownloadURL() failed:', error)
+            throw new Error(`Failed to get download URL from Firebase Storage: ${error.message}`)
           }
-        } else {
-          // Not a Firebase Storage URL, use fetch
-          console.log('Not a Firebase Storage URL, fetching directly from:', backgroundUrl.substring(0, 80) + '...')
-          const response = await fetch(backgroundUrl)
-          console.log('Fetch response status:', response.status, response.statusText)
-          
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status} ${response.statusText}`)
-          }
-          
-          blob = await response.blob()
-          console.log('Blob received, size:', blob.size, 'type:', blob.type)
         }
         
-        // Convert blob to data URL
-        const dataUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader()
-          reader.onloadend = () => {
-            if (reader.result) {
-              console.log('Data URL created, length:', reader.result.length)
-              resolve(reader.result)
-            } else {
-              reject(new Error('Failed to convert blob to data URL'))
-            }
-          }
-          reader.onerror = (error) => {
-            console.error('FileReader error:', error)
-            reject(new Error('FileReader error'))
-          }
-          reader.readAsDataURL(blob)
-        })
-        
-        // Load the data URL to get dimensions
+        // Load image to get dimensions and verify it loads
         const img = new Image()
-        img.onload = () => {
-          console.log('Image loaded from data URL, dimensions:', img.naturalWidth, img.naturalHeight)
-          setImageDimensions({ width: img.naturalWidth || img.width || 800, height: img.naturalHeight || img.height || 1000 })
-          setBackgroundDataUrl(dataUrl)
-          setImageReady(true)
-          console.log('✅ Background image loaded successfully')
-        }
-        img.onerror = (error) => {
-          console.error('❌ Error loading converted image:', error)
-          setImageReady(false)
-        }
-        img.src = dataUrl
+        img.crossOrigin = 'anonymous' // Allow CORS for the image
+        
+        await new Promise((resolve, reject) => {
+          img.onload = () => {
+            console.log('Image loaded, dimensions:', img.naturalWidth, img.naturalHeight)
+            setImageDimensions({ 
+              width: img.naturalWidth || img.width || 800, 
+              height: img.naturalHeight || img.height || 1000 
+            })
+            setBackgroundDataUrl(finalUrl) // Use the URL directly, no need for data URL
+            setImageReady(true)
+            console.log('✅ Background image loaded successfully')
+            resolve()
+          }
+          img.onerror = (error) => {
+            console.error('❌ Error loading image:', error)
+            setImageReady(false)
+            reject(error)
+          }
+          img.src = finalUrl
+        })
       } catch (error) {
         console.error('❌ Error loading background image:', error)
         console.error('Error details:', {
@@ -155,6 +119,46 @@ const SharePNL = ({ trade }) => {
     
     loadImage()
   }, [backgroundUrl])
+
+  // Generate the image when modal opens and image is ready
+  useEffect(() => {
+    if (isOpen && imageReady && !generatedImageUrl && !isGeneratingImage && cardRef.current) {
+      generatePreviewImage()
+    }
+  }, [isOpen, imageReady, generatedImageUrl, isGeneratingImage])
+
+  // Generate preview image
+  const generatePreviewImage = async () => {
+    if (!cardRef.current || !imageReady) {
+      console.warn('Cannot generate preview: cardRef or imageReady not available')
+      return
+    }
+    
+    setIsGeneratingImage(true)
+    try {
+      // Ensure card is visible for capture
+      const cardElement = cardRef.current
+      const originalDisplay = cardElement.style.display
+      cardElement.style.display = 'block'
+      cardElement.style.visibility = 'visible'
+      cardElement.style.opacity = '1'
+      
+      // Wait a bit for the element to be fully rendered
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      const canvas = await captureCard()
+      const dataUrl = canvas.toDataURL('image/png')
+      console.log('Preview image generated, setting generatedImageUrl')
+      setGeneratedImageUrl(dataUrl)
+      
+      // Restore original display (will be hidden by conditional rendering anyway)
+      cardElement.style.display = originalDisplay
+    } catch (error) {
+      console.error('Error generating preview image:', error)
+    } finally {
+      setIsGeneratingImage(false)
+    }
+  }
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('en-US', {
@@ -185,38 +189,99 @@ const SharePNL = ({ trade }) => {
       throw new Error('Background image not ready. Please wait a moment.')
     }
     
-    // Wait a bit to ensure everything is rendered, especially text
-    await new Promise(resolve => setTimeout(resolve, 300))
+    const cardElement = cardRef.current
     
-    // Force a reflow to ensure all text is rendered
-    cardRef.current.offsetHeight
+    // Ensure all fonts are loaded before capture
+    await document.fonts.ready
     
-    return await html2canvas(cardRef.current, {
-      backgroundColor: null,
-      scale: 2,
+    // Wait a bit to ensure everything is rendered, especially text and images
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
+    // Force multiple reflows to ensure all text is rendered
+    cardElement.offsetHeight
+    void cardElement.offsetWidth
+    
+    // Get exact dimensions
+    const elementWidth = cardElement.offsetWidth
+    const elementHeight = cardElement.offsetHeight
+    const scrollWidth = cardElement.scrollWidth
+    const scrollHeight = cardElement.scrollHeight
+    
+    console.log('Capturing card with dimensions:', elementWidth, 'x', elementHeight)
+    
+    return await html2canvas(cardElement, {
+      backgroundColor: null, // Transparent background
+      scale: 2, // Higher quality
       logging: false,
       useCORS: true,
-      allowTaint: false,
+      allowTaint: true, // Changed to true to allow cross-origin images
       foreignObjectRendering: false,
-      imageTimeout: 15000,
+      imageTimeout: 30000, // Increased timeout
       removeContainer: true,
-      onclone: (clonedDoc) => {
+      width: elementWidth,
+      height: elementHeight,
+      windowWidth: scrollWidth,
+      windowHeight: scrollHeight,
+      x: 0,
+      y: 0,
+      scrollX: 0,
+      scrollY: 0,
+      onclone: (clonedDoc, clonedElement) => {
+        console.log('Cloning element for html2canvas...')
+        
+        // Ensure the cloned card element has proper styling
+        if (clonedElement) {
+          clonedElement.style.display = 'block'
+          clonedElement.style.visibility = 'visible'
+          clonedElement.style.opacity = '1'
+          clonedElement.style.width = `${elementWidth}px`
+          clonedElement.style.height = `${elementHeight}px`
+        }
+        
         // Ensure all text elements are visible and properly styled in the clone
         const profitBoxes = clonedDoc.querySelectorAll('[class*="bg-green-500"], [class*="bg-red-500"]')
         profitBoxes.forEach(box => {
+          // Apply flexbox centering for perfect vertical alignment
+          box.style.display = 'flex'
+          box.style.alignItems = 'center'
+          box.style.justifyContent = 'center'
+          box.style.width = 'fit-content'
+          box.style.maxWidth = '100%'
+          box.style.padding = '8px 24px' // Equal padding for proper centering
+          box.style.opacity = '1'
+          box.style.visibility = 'visible'
+          box.style.position = 'relative'
+          box.style.zIndex = '1'
+          
           const textElement = box.querySelector('span, div')
           if (textElement) {
-            // Force text to be visible and properly styled
+            // Force text to be visible and properly styled with higher z-index
             textElement.style.color = '#ffffff'
             textElement.style.webkitTextFillColor = '#ffffff'
             textElement.style.opacity = '1'
             textElement.style.visibility = 'visible'
             textElement.style.display = 'block'
-            // Ensure parent is also visible
-            box.style.opacity = '1'
-            box.style.visibility = 'visible'
+            textElement.style.margin = '0'
+            textElement.style.padding = '0'
+            textElement.style.position = 'relative'
+            textElement.style.zIndex = '10'
+            textElement.style.lineHeight = '1'
           }
         })
+        
+        // Ensure all other text elements are visible
+        const allTextElements = clonedDoc.querySelectorAll('h2, p, span')
+        allTextElements.forEach(el => {
+          const computedStyle = window.getComputedStyle(el)
+          if (computedStyle.color !== 'transparent' && computedStyle.opacity !== '0') {
+            el.style.visibility = 'visible'
+            el.style.opacity = '1'
+            el.style.position = 'relative'
+            el.style.zIndex = '10'
+          }
+        })
+        
+        console.log('Clone preparation complete')
       }
     })
   }
@@ -265,32 +330,26 @@ const SharePNL = ({ trade }) => {
   }
 
   const handleCopy = async () => {
-    if (!cardRef.current) {
-      alert('Card not ready. Please wait for the image to load.')
-      return
-    }
-
-    if (!imageReady) {
-      alert('Image is still loading. Please wait a moment and try again.')
+    if (!generatedImageUrl) {
+      alert('Image not ready. Please wait for the preview to generate.')
       return
     }
 
     try {
-      const canvas = await captureCard()
+      // Convert the generated image data URL to a blob
+      const response = await fetch(generatedImageUrl)
+      const blob = await response.blob()
 
-      canvas.toBlob(async (blob) => {
-        if (blob) {
-          try {
-            await navigator.clipboard.write([
-              new ClipboardItem({ 'image/png': blob })
-            ])
-            alert('Image copied to clipboard!')
-          } catch (error) {
-            // Fallback: download
-            handleDownload()
-          }
-        }
-      }, 'image/png')
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': blob })
+        ])
+        alert('Image copied to clipboard!')
+      } catch (error) {
+        console.error('Clipboard API error:', error)
+        // Fallback: download
+        handleDownload()
+      }
     } catch (error) {
       console.error('Error copying image:', error)
       alert('Error copying image. Please try again.')
@@ -298,31 +357,24 @@ const SharePNL = ({ trade }) => {
   }
 
   const handleDownload = async () => {
-    if (!cardRef.current) {
-      alert('Card not ready. Please wait for the image to load.')
-      return
-    }
-
-    if (!imageReady) {
-      alert('Image is still loading. Please wait a moment and try again.')
+    if (!generatedImageUrl) {
+      alert('Image not ready. Please wait for the preview to generate.')
       return
     }
 
     try {
-      const canvas = await captureCard()
+      // Convert the generated image data URL to a blob
+      const response = await fetch(generatedImageUrl)
+      const blob = await response.blob()
 
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const url = URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url
-          a.download = `${trade.coinName}-pnl.png`
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
-          URL.revokeObjectURL(url)
-        }
-      }, 'image/png')
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${trade.coinName}-pnl.png`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Error downloading image:', error)
       alert('Error downloading image. Please try again.')
@@ -357,7 +409,11 @@ const SharePNL = ({ trade }) => {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-white">Share PNL</h3>
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={() => {
+                  setIsOpen(false)
+                  // Reset generated image when modal closes
+                  setGeneratedImageUrl(null)
+                }}
                 className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5 text-gray-400" />
@@ -365,7 +421,16 @@ const SharePNL = ({ trade }) => {
             </div>
 
             {/* Shareable Card Preview */}
-            <div className="mb-4 rounded-lg overflow-hidden border border-gray-700">
+            <div 
+              className="mb-4 rounded-lg overflow-hidden border border-gray-700"
+              style={{
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                MozUserSelect: 'none',
+                msUserSelect: 'none',
+                position: 'relative'
+              }}
+            >
               {!imageReady && (
                 <div className="w-full flex items-center justify-center bg-gray-800" style={{ minHeight: '400px' }}>
                   <div className="text-center">
@@ -374,11 +439,52 @@ const SharePNL = ({ trade }) => {
                   </div>
                 </div>
               )}
+              {isGeneratingImage && imageReady && (
+                <div className="w-full flex items-center justify-center bg-gray-800" style={{ minHeight: '400px' }}>
+                  <div className="text-center">
+                    <p className="text-gray-400 mb-2">Generating image...</p>
+                    <p className="text-gray-500 text-sm">Please wait</p>
+                  </div>
+                </div>
+              )}
+              {generatedImageUrl && !isGeneratingImage && (
+                <img
+                  src={generatedImageUrl}
+                  alt="PNL Card"
+                  className="w-full h-auto"
+                  style={{
+                    display: 'block',
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
+                    MozUserSelect: 'none',
+                    msUserSelect: 'none',
+                    pointerEvents: 'none',
+                    WebkitTouchCallout: 'none',
+                    WebkitUserDrag: 'none',
+                    KhtmlUserSelect: 'none',
+                    cursor: 'default',
+                    position: 'relative',
+                    zIndex: 10
+                  }}
+                  draggable={false}
+                  onContextMenu={(e) => e.preventDefault()}
+                  onDragStart={(e) => e.preventDefault()}
+                />
+              )}
+              {/* Always render card for capture, but make it completely invisible and non-interactive when image is generated */}
               <div
                 ref={cardRef}
                 className="relative w-full bg-cover bg-center bg-gradient-to-br from-blue-900 via-purple-900 to-black"
                 style={{
-                  display: imageReady ? 'block' : 'none',
+                  display: (imageReady && !generatedImageUrl) || isGeneratingImage ? 'block' : 'none',
+                  position: generatedImageUrl ? 'absolute' : 'relative',
+                  top: generatedImageUrl ? '-9999px' : 'auto',
+                  left: generatedImageUrl ? '-9999px' : 'auto',
+                  visibility: generatedImageUrl ? 'hidden' : 'visible',
+                  opacity: generatedImageUrl ? '0' : '1',
+                  pointerEvents: generatedImageUrl ? 'none' : 'auto',
+                  userSelect: generatedImageUrl ? 'none' : 'auto',
+                  zIndex: generatedImageUrl ? '-1' : '1',
                   backgroundImage: `url(${backgroundDataUrl || backgroundUrl})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
@@ -404,11 +510,23 @@ const SharePNL = ({ trade }) => {
                   <div className="text-left">
                     {/* Profit USD */}
                     <div className="mb-4">
-                      <div className={`${isWinning ? 'bg-green-500' : 'bg-red-500'} rounded-lg px-6 py-4 inline-block shadow-xl`} style={{ minWidth: 'fit-content' }}>
-                        <span className="text-4xl md:text-5xl font-bold text-white whitespace-nowrap block" style={{ 
+                      <div className={`${isWinning ? 'bg-green-500' : 'bg-red-500'} rounded-lg inline-flex items-center justify-center shadow-xl`} style={{ 
+                        width: 'fit-content', 
+                        maxWidth: '100%', 
+                        position: 'relative', 
+                        zIndex: 1,
+                        padding: '8px 24px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <span className="text-4xl md:text-5xl font-bold text-white whitespace-nowrap" style={{ 
                           color: '#ffffff',
                           WebkitTextFillColor: '#ffffff',
-                          textShadow: 'none'
+                          textShadow: 'none',
+                          position: 'relative',
+                          zIndex: 10,
+                          lineHeight: '1'
                         }}>
                           {formatCurrency(trade.profitUSD)}
                         </span>
