@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Share2, X, Download, Copy } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import { useAuth } from '../contexts/AuthContext'
-import { ref, getDownloadURL } from 'firebase/storage'
+import { ref, getBlob } from 'firebase/storage'
 import { storage } from '../firebase/config'
 
 const SharePNL = ({ trade }) => {
@@ -12,8 +12,7 @@ const SharePNL = ({ trade }) => {
   const [imageDimensions, setImageDimensions] = useState({ width: 800, height: 1000 })
   const [backgroundDataUrl, setBackgroundDataUrl] = useState(null)
   const [imageReady, setImageReady] = useState(false)
-  const [generatedImageUrl, setGeneratedImageUrl] = useState(null) // Store the generated image
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   
   // Determine if this is a winning or losing trade
   const isWinning = trade.profitUSD > 0
@@ -21,7 +20,7 @@ const SharePNL = ({ trade }) => {
     ? (userProfile?.winningTradeBackground || '/jupiter-bg.png')
     : (userProfile?.losingTradeBackground || '/jupiter-bg.png')
   
-  // Load image - use Firebase Storage getDownloadURL for proper signed URLs
+  // Load image - use Firebase Storage getBlob to bypass CORS issues
   useEffect(() => {
     if (!backgroundUrl) {
       console.log('No backgroundUrl provided')
@@ -51,8 +50,8 @@ const SharePNL = ({ trade }) => {
           return
         }
         
-        // For Firebase Storage URLs, use Firebase SDK to get download URL (avoids CORS)
-        let finalUrl = backgroundUrl
+        // For Firebase Storage URLs, use Firebase SDK to get blob directly (avoids CORS)
+        let dataUrl = backgroundUrl
         
         // Check if it's a Firebase Storage URL
         if (backgroundUrl.includes('firebasestorage.googleapis.com')) {
@@ -67,24 +66,30 @@ const SharePNL = ({ trade }) => {
           const decodedPath = decodeURIComponent(encodedPath)
           console.log('Extracted Storage path:', decodedPath)
           
-          // Use Firebase Storage SDK to get a signed download URL (no CORS issues)
+          // Use Firebase Storage SDK to get blob directly (bypasses CORS)
           const storageRef = ref(storage, decodedPath)
-          console.log('Getting download URL from Firebase Storage...')
+          console.log('Getting blob from Firebase Storage...')
           
           try {
-            const downloadURL = await getDownloadURL(storageRef)
-            console.log('Got download URL from Firebase Storage')
-            // Use the download URL directly - no need to convert to blob/data URL
-            finalUrl = downloadURL
+            const blob = await getBlob(storageRef)
+            console.log('Got blob from Firebase Storage, size:', blob.size)
+            
+            // Convert blob to data URL
+            dataUrl = await new Promise((resolve, reject) => {
+              const reader = new FileReader()
+              reader.onloadend = () => resolve(reader.result)
+              reader.onerror = reject
+              reader.readAsDataURL(blob)
+            })
+            console.log('Converted blob to data URL')
           } catch (error) {
-            console.error('getDownloadURL() failed:', error)
-            throw new Error(`Failed to get download URL from Firebase Storage: ${error.message}`)
+            console.error('getBlob() failed:', error)
+            throw new Error(`Failed to get blob from Firebase Storage: ${error.message}`)
           }
         }
         
-        // Load image to get dimensions and verify it loads
+        // Load image to get dimensions
         const img = new Image()
-        img.crossOrigin = 'anonymous' // Allow CORS for the image
         
         await new Promise((resolve, reject) => {
           img.onload = () => {
@@ -93,7 +98,7 @@ const SharePNL = ({ trade }) => {
               width: img.naturalWidth || img.width || 800, 
               height: img.naturalHeight || img.height || 1000 
             })
-            setBackgroundDataUrl(finalUrl) // Use the URL directly, no need for data URL
+            setBackgroundDataUrl(dataUrl) // Use the data URL (no CORS issues)
             setImageReady(true)
             console.log('✅ Background image loaded successfully')
             resolve()
@@ -103,7 +108,7 @@ const SharePNL = ({ trade }) => {
             setImageReady(false)
             reject(error)
           }
-          img.src = finalUrl
+          img.src = dataUrl
         })
       } catch (error) {
         console.error('❌ Error loading background image:', error)
@@ -120,44 +125,24 @@ const SharePNL = ({ trade }) => {
     loadImage()
   }, [backgroundUrl])
 
-  // Generate the image when modal opens and image is ready
-  useEffect(() => {
-    if (isOpen && imageReady && !generatedImageUrl && !isGeneratingImage && cardRef.current) {
-      generatePreviewImage()
-    }
-  }, [isOpen, imageReady, generatedImageUrl, isGeneratingImage])
-
-  // Generate preview image
-  const generatePreviewImage = async () => {
+  // Capture the card as an image on-demand (only when exporting)
+  const captureCard = async () => {
     if (!cardRef.current || !imageReady) {
-      console.warn('Cannot generate preview: cardRef or imageReady not available')
-      return
+      throw new Error('Card not ready')
     }
     
-    setIsGeneratingImage(true)
-    try {
-      // Ensure card is visible for capture
-      const cardElement = cardRef.current
-      const originalDisplay = cardElement.style.display
-      cardElement.style.display = 'block'
-      cardElement.style.visibility = 'visible'
-      cardElement.style.opacity = '1'
-      
-      // Wait a bit for the element to be fully rendered
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
-      const canvas = await captureCard()
-      const dataUrl = canvas.toDataURL('image/png')
-      console.log('Preview image generated, setting generatedImageUrl')
-      setGeneratedImageUrl(dataUrl)
-      
-      // Restore original display (will be hidden by conditional rendering anyway)
-      cardElement.style.display = originalDisplay
-    } catch (error) {
-      console.error('Error generating preview image:', error)
-    } finally {
-      setIsGeneratingImage(false)
-    }
+    await document.fonts.ready
+    
+    const canvas = await html2canvas(cardRef.current, {
+      backgroundColor: null,
+      scale: 2,
+      logging: false,
+      useCORS: true,
+      allowTaint: true,
+      imageTimeout: 30000
+    })
+    
+    return canvas.toDataURL('image/png')
   }
 
   const formatCurrency = (value) => {
@@ -180,204 +165,81 @@ const SharePNL = ({ trade }) => {
     return formatCurrency(value)
   }
 
-  const captureCard = async () => {
-    if (!cardRef.current) {
-      throw new Error('Card element not found')
-    }
-    
-    if (!imageReady) {
-      throw new Error('Background image not ready. Please wait a moment.')
-    }
-    
-    const cardElement = cardRef.current
-    
-    // Ensure all fonts are loaded before capture
-    await document.fonts.ready
-    
-    // Wait a bit to ensure everything is rendered, especially text and images
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    // Force multiple reflows to ensure all text is rendered
-    cardElement.offsetHeight
-    void cardElement.offsetWidth
-    
-    // Get exact dimensions
-    const elementWidth = cardElement.offsetWidth
-    const elementHeight = cardElement.offsetHeight
-    const scrollWidth = cardElement.scrollWidth
-    const scrollHeight = cardElement.scrollHeight
-    
-    console.log('Capturing card with dimensions:', elementWidth, 'x', elementHeight)
-    
-    return await html2canvas(cardElement, {
-      backgroundColor: null, // Transparent background
-      scale: 2, // Higher quality
-      logging: false,
-      useCORS: true,
-      allowTaint: true, // Changed to true to allow cross-origin images
-      foreignObjectRendering: false,
-      imageTimeout: 30000, // Increased timeout
-      removeContainer: true,
-      width: elementWidth,
-      height: elementHeight,
-      windowWidth: scrollWidth,
-      windowHeight: scrollHeight,
-      x: 0,
-      y: 0,
-      scrollX: 0,
-      scrollY: 0,
-      onclone: (clonedDoc, clonedElement) => {
-        console.log('Cloning element for html2canvas...')
-        
-        // Ensure the cloned card element has proper styling
-        if (clonedElement) {
-          clonedElement.style.display = 'block'
-          clonedElement.style.visibility = 'visible'
-          clonedElement.style.opacity = '1'
-          clonedElement.style.width = `${elementWidth}px`
-          clonedElement.style.height = `${elementHeight}px`
-        }
-        
-        // Ensure all text elements are visible and properly styled in the clone
-        const profitBoxes = clonedDoc.querySelectorAll('[class*="bg-green-500"], [class*="bg-red-500"]')
-        profitBoxes.forEach(box => {
-          // Apply flexbox centering for perfect vertical alignment
-          box.style.display = 'flex'
-          box.style.alignItems = 'center'
-          box.style.justifyContent = 'center'
-          box.style.width = 'fit-content'
-          box.style.maxWidth = '100%'
-          box.style.padding = '8px 24px' // Equal padding for proper centering
-          box.style.opacity = '1'
-          box.style.visibility = 'visible'
-          box.style.position = 'relative'
-          box.style.zIndex = '1'
-          
-          const textElement = box.querySelector('span, div')
-          if (textElement) {
-            // Force text to be visible and properly styled with higher z-index
-            textElement.style.color = '#ffffff'
-            textElement.style.webkitTextFillColor = '#ffffff'
-            textElement.style.opacity = '1'
-            textElement.style.visibility = 'visible'
-            textElement.style.display = 'block'
-            textElement.style.margin = '0'
-            textElement.style.padding = '0'
-            textElement.style.position = 'relative'
-            textElement.style.zIndex = '10'
-            textElement.style.lineHeight = '1'
-          }
-        })
-        
-        // Ensure all other text elements are visible
-        const allTextElements = clonedDoc.querySelectorAll('h2, p, span')
-        allTextElements.forEach(el => {
-          const computedStyle = window.getComputedStyle(el)
-          if (computedStyle.color !== 'transparent' && computedStyle.opacity !== '0') {
-            el.style.visibility = 'visible'
-            el.style.opacity = '1'
-            el.style.position = 'relative'
-            el.style.zIndex = '10'
-          }
-        })
-        
-        console.log('Clone preparation complete')
-      }
-    })
-  }
-
   const handleShare = async () => {
-    if (!cardRef.current) {
-      alert('Card not ready. Please wait for the image to load.')
-      return
-    }
-
-    if (!imageReady) {
-      alert('Image is still loading. Please wait a moment and try again.')
-      return
-    }
-
+    if (!imageReady || isExporting) return
+    
+    setIsExporting(true)
     try {
-      const canvas = await captureCard()
-
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const file = new File([blob], `${trade.coinName}-pnl.png`, { type: 'image/png' })
-          
-          if (navigator.share && navigator.canShare({ files: [file] })) {
-            navigator.share({
-              files: [file],
-              title: `${trade.coinName} Trade PNL`,
-              text: `Check out my ${trade.coinName} trade: ${formatCurrency(trade.profitUSD)} profit!`
-            })
-          } else {
-            // Fallback: download the image
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `${trade.coinName}-pnl.png`
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            URL.revokeObjectURL(url)
-          }
-        }
-      }, 'image/png')
+      const dataUrl = await captureCard()
+      const response = await fetch(dataUrl)
+      const blob = await response.blob()
+      const file = new File([blob], `${trade.coinName}-pnl.png`, { type: 'image/png' })
+      
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `${trade.coinName} Trade PNL`,
+          text: `Check out my ${trade.coinName} trade: ${formatCurrency(trade.profitUSD)} profit!`
+        })
+      } else {
+        // Fallback: download the image
+        await handleDownloadWithDataUrl(dataUrl)
+      }
     } catch (error) {
-      console.error('Error generating share image:', error)
-      alert('Error generating share image. Please try again.')
+      console.error('Error sharing image:', error)
+      alert('Error sharing image. Please try again.')
+    } finally {
+      setIsExporting(false)
     }
   }
 
   const handleCopy = async () => {
-    if (!generatedImageUrl) {
-      alert('Image not ready. Please wait for the preview to generate.')
-      return
-    }
-
+    if (!imageReady || isExporting) return
+    
+    setIsExporting(true)
     try {
-      // Convert the generated image data URL to a blob
-      const response = await fetch(generatedImageUrl)
+      const dataUrl = await captureCard()
+      const response = await fetch(dataUrl)
       const blob = await response.blob()
-
-      try {
-        await navigator.clipboard.write([
-          new ClipboardItem({ 'image/png': blob })
-        ])
-        alert('Image copied to clipboard!')
-      } catch (error) {
-        console.error('Clipboard API error:', error)
-        // Fallback: download
-        handleDownload()
-      }
+      
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': blob })
+      ])
+      alert('Image copied to clipboard!')
     } catch (error) {
       console.error('Error copying image:', error)
       alert('Error copying image. Please try again.')
+    } finally {
+      setIsExporting(false)
     }
   }
 
+  const handleDownloadWithDataUrl = async (dataUrl) => {
+    const response = await fetch(dataUrl)
+    const blob = await response.blob()
+    
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${trade.coinName}-pnl.png`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
   const handleDownload = async () => {
-    if (!generatedImageUrl) {
-      alert('Image not ready. Please wait for the preview to generate.')
-      return
-    }
-
+    if (!imageReady || isExporting) return
+    
+    setIsExporting(true)
     try {
-      // Convert the generated image data URL to a blob
-      const response = await fetch(generatedImageUrl)
-      const blob = await response.blob()
-
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${trade.coinName}-pnl.png`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      const dataUrl = await captureCard()
+      await handleDownloadWithDataUrl(dataUrl)
     } catch (error) {
       console.error('Error downloading image:', error)
       alert('Error downloading image. Please try again.')
+    } finally {
+      setIsExporting(false)
     }
   }
 
@@ -409,18 +271,14 @@ const SharePNL = ({ trade }) => {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-white">Share PNL</h3>
               <button
-                onClick={() => {
-                  setIsOpen(false)
-                  // Reset generated image when modal closes
-                  setGeneratedImageUrl(null)
-                }}
+                onClick={() => setIsOpen(false)}
                 className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5 text-gray-400" />
               </button>
             </div>
 
-            {/* Shareable Card Preview */}
+            {/* Shareable Card Preview - ALWAYS shows the HTML card */}
             <div 
               className="mb-4 rounded-lg overflow-hidden border border-gray-700"
               style={{
@@ -431,6 +289,7 @@ const SharePNL = ({ trade }) => {
                 position: 'relative'
               }}
             >
+              {/* Loading state - only while background image loads */}
               {!imageReady && (
                 <div className="w-full flex items-center justify-center bg-gray-800" style={{ minHeight: '400px' }}>
                   <div className="text-center">
@@ -439,52 +298,25 @@ const SharePNL = ({ trade }) => {
                   </div>
                 </div>
               )}
-              {isGeneratingImage && imageReady && (
-                <div className="w-full flex items-center justify-center bg-gray-800" style={{ minHeight: '400px' }}>
-                  <div className="text-center">
-                    <p className="text-gray-400 mb-2">Generating image...</p>
-                    <p className="text-gray-500 text-sm">Please wait</p>
-                  </div>
+              
+              {/* Exporting overlay */}
+              {isExporting && (
+                <div className="absolute inset-0 bg-black/50 z-20 flex items-center justify-center">
+                  <p className="text-white font-medium">Exporting...</p>
                 </div>
               )}
-              {generatedImageUrl && !isGeneratingImage && (
-                <img
-                  src={generatedImageUrl}
-                  alt="PNL Card"
-                  className="w-full h-auto"
-                  style={{
-                    display: 'block',
-                    userSelect: 'none',
-                    WebkitUserSelect: 'none',
-                    MozUserSelect: 'none',
-                    msUserSelect: 'none',
-                    pointerEvents: 'none',
-                    WebkitTouchCallout: 'none',
-                    WebkitUserDrag: 'none',
-                    KhtmlUserSelect: 'none',
-                    cursor: 'default',
-                    position: 'relative',
-                    zIndex: 10
-                  }}
-                  draggable={false}
-                  onContextMenu={(e) => e.preventDefault()}
-                  onDragStart={(e) => e.preventDefault()}
-                />
-              )}
-              {/* Always render card for capture, but make it completely invisible and non-interactive when image is generated */}
+              
+              {/* THE PREVIEW - always show this HTML card directly */}
               <div
                 ref={cardRef}
                 className="relative w-full bg-cover bg-center bg-gradient-to-br from-blue-900 via-purple-900 to-black"
                 style={{
-                  display: (imageReady && !generatedImageUrl) || isGeneratingImage ? 'block' : 'none',
-                  position: generatedImageUrl ? 'absolute' : 'relative',
-                  top: generatedImageUrl ? '-9999px' : 'auto',
-                  left: generatedImageUrl ? '-9999px' : 'auto',
-                  visibility: generatedImageUrl ? 'hidden' : 'visible',
-                  opacity: generatedImageUrl ? '0' : '1',
-                  pointerEvents: generatedImageUrl ? 'none' : 'auto',
-                  userSelect: generatedImageUrl ? 'none' : 'auto',
-                  zIndex: generatedImageUrl ? '-1' : '1',
+                  display: imageReady ? 'block' : 'none',
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none',
+                  MozUserSelect: 'none',
+                  msUserSelect: 'none',
                   backgroundImage: `url(${backgroundDataUrl || backgroundUrl})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
@@ -498,7 +330,7 @@ const SharePNL = ({ trade }) => {
                 <div className="absolute inset-0 bg-black/20 z-0"></div>
                 
                 {/* Overlay content */}
-                <div className="relative z-10 h-full flex flex-col justify-between p-6">
+                <div className="relative z-10 h-full flex flex-col justify-between p-3">
                   {/* Coin Name - Top Left */}
                   <div className="text-left">
                     <h2 className="text-5xl md:text-6xl font-bold text-white drop-shadow-lg" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
@@ -510,23 +342,20 @@ const SharePNL = ({ trade }) => {
                   <div className="text-left">
                     {/* Profit USD */}
                     <div className="mb-4">
-                      <div className={`${isWinning ? 'bg-green-500' : 'bg-red-500'} rounded-lg inline-flex items-center justify-center shadow-xl`} style={{ 
-                        width: 'fit-content', 
-                        maxWidth: '100%', 
-                        position: 'relative', 
-                        zIndex: 1,
-                        padding: '8px 24px',
-                        display: 'flex',
+                      <div className={`${isWinning ? 'bg-green-500' : 'bg-red-500'} rounded-lg shadow-xl`} style={{ 
+                        display: 'inline-flex',
                         alignItems: 'center',
-                        justifyContent: 'center'
+                        justifyContent: 'center',
+                        padding: '12px 24px',
+                        position: 'relative', 
+                        zIndex: 1
                       }}>
                         <span className="text-4xl md:text-5xl font-bold text-white whitespace-nowrap" style={{ 
                           color: '#ffffff',
                           WebkitTextFillColor: '#ffffff',
                           textShadow: 'none',
-                          position: 'relative',
-                          zIndex: 10,
-                          lineHeight: '1'
+                          lineHeight: '1',
+                          display: 'block'
                         }}>
                           {formatCurrency(trade.profitUSD)}
                         </span>
@@ -585,4 +414,5 @@ const SharePNL = ({ trade }) => {
 }
 
 export default SharePNL
+
 
