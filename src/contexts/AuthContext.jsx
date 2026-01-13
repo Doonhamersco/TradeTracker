@@ -27,27 +27,91 @@ export const AuthProvider = ({ children }) => {
   const [usernameSession, setUsernameSession] = useState(null) // For username-only auth
 
   // Sign up with email and password
-  const signup = async (email, password) => {
+  const signup = async (email, password, username = null) => {
     try {
+      // If username provided, check if it's already taken
+      if (username) {
+        const usernameLower = username.toLowerCase()
+        const usernameRef = collection(db, 'usernames')
+        const q = query(usernameRef, where('username', '==', usernameLower))
+        const querySnapshot = await getDocs(q)
+        
+        if (!querySnapshot.empty) {
+          return { success: false, error: 'Username is already taken' }
+        }
+      }
+      
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       const user = userCredential.user
       
       // Create user profile in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
+      const userProfileData = {
         email: user.email,
         createdAt: new Date().toISOString()
-      })
+      }
+      
+      // Add username if provided
+      if (username) {
+        userProfileData.username = username.toLowerCase()
+        userProfileData.displayName = username // Keep original casing for display
+      }
+      
+      await setDoc(doc(db, 'users', user.uid), userProfileData)
+      
+      // Create username lookup document if username provided
+      if (username) {
+        await setDoc(doc(db, 'usernames', username.toLowerCase()), {
+          username: username.toLowerCase(),
+          userId: user.uid,
+          createdAt: new Date().toISOString()
+        })
+      }
       
       return { success: true, user }
     } catch (error) {
+      // Handle specific Firebase errors
+      if (error.code === 'auth/email-already-in-use') {
+        return { success: false, error: 'Email is already registered' }
+      }
+      if (error.code === 'auth/weak-password') {
+        return { success: false, error: 'Password is too weak' }
+      }
       return { success: false, error: error.message }
     }
   }
 
-  // Sign in with email and password
-  const login = async (email, password) => {
+  // Sign in with email/username and password
+  const login = async (emailOrUsername, password) => {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      let loginEmail = emailOrUsername.trim()
+      
+      // Check if input is a username (no @ symbol)
+      if (!loginEmail.includes('@')) {
+        // Look up username to get the associated email
+        const usernameLower = loginEmail.toLowerCase()
+        const usernameRef = collection(db, 'usernames')
+        const q = query(usernameRef, where('username', '==', usernameLower))
+        const querySnapshot = await getDocs(q)
+        
+        if (querySnapshot.empty) {
+          return { success: false, error: 'Provided credentials are invalid.' }
+        }
+        
+        // Get the userId from username document
+        const usernameDoc = querySnapshot.docs[0]
+        const userId = usernameDoc.data().userId
+        
+        // Get the user document to find their email
+        const userDoc = await getDoc(doc(db, 'users', userId))
+        if (!userDoc.exists() || !userDoc.data().email) {
+          return { success: false, error: 'Provided credentials are invalid.' }
+        }
+        
+        loginEmail = userDoc.data().email
+      }
+      
+      // Now sign in with the email
+      const userCredential = await signInWithEmailAndPassword(auth, loginEmail, password)
       return { success: true, user: userCredential.user }
     } catch (error) {
       // Check for invalid credential errors

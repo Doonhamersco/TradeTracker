@@ -18,8 +18,8 @@ function HomePage() {
   const [celebrateProfit, setCelebrateProfit] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showProfileModal, setShowProfileModal] = useState(false)
-  const [sortColumn, setSortColumn] = useState(null)
-  const [sortDirection, setSortDirection] = useState('desc') // 'asc' or 'desc'
+  const [sortColumn, setSortColumn] = useState('date') // Default sort by date
+  const [sortDirection, setSortDirection] = useState('desc') // 'asc' or 'desc' - most recent first
 
   // Helper function to get current date in format for date input
   const getCurrentDateString = () => {
@@ -113,8 +113,18 @@ function HomePage() {
     const profitUSD = calculateProfitUSD(formData.entrySize, formData.exitSize)
     const profitPercent = calculateProfitPercent(formData.entrySize, formData.exitSize)
 
-    // Convert date string to ISO string for Firestore (set to midnight UTC)
-    const dateISO = formData.date ? new Date(formData.date + 'T00:00:00').toISOString() : new Date().toISOString()
+    // For new trades: use selected date + current time for proper sorting
+    // For edits: use selected date + current time
+    let dateISO
+    if (formData.date) {
+      const selectedDate = new Date(formData.date)
+      const now = new Date()
+      // Combine selected date with current time for accurate sorting
+      selectedDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds())
+      dateISO = selectedDate.toISOString()
+    } else {
+      dateISO = new Date().toISOString()
+    }
 
     const tradeData = {
       coinName: formData.coinName.trim(),
@@ -153,7 +163,7 @@ function HomePage() {
       entrySize: '',
       exitSize: '',
       category: 'Fibonacci',
-      date: getCurrentDateTimeString()
+      date: getCurrentDateString()
     })
   }
 
