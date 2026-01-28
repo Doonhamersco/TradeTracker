@@ -360,7 +360,7 @@ function HomePage() {
         {/* Main Content */}
         <div className="container mx-auto px-4 py-8 max-w-6xl flex-1">
         {/* Header */}
-        <header className="text-center mb-12">
+        <header className="text-center mb-8">
           <div className="flex justify-between items-center mb-4">
             <div className="flex-1"></div>
             <div className="flex-1 text-center">
@@ -379,6 +379,21 @@ function HomePage() {
                 onShowProfile={() => setShowProfileModal(true)}
               />
             </div>
+          </div>
+          
+          {/* Navigation Tabs */}
+          <div className="flex justify-center gap-2 mt-6">
+            <button
+              className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg"
+            >
+              Trade History
+            </button>
+            <button
+              onClick={() => navigate('/active')}
+              className="px-6 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium rounded-lg transition-colors"
+            >
+              Active Trades
+            </button>
           </div>
         </header>
 

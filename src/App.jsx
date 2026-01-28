@@ -6,6 +6,7 @@ import Auth from './components/Auth'
 import HomePage from './pages/HomePage'
 import PNLPage from './pages/PNLPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import ActiveTradesPage from './pages/ActiveTradesPage'
 import BackgroundVideo from './components/BackgroundVideo'
 import { subscribeToUserTrades } from './services/tradesService'
 
@@ -75,6 +76,10 @@ function App() {
           <Route 
             path="/pnl" 
             element={currentUser ? <PNLPage trades={trades} /> : <Navigate to="/login" replace />} 
+          />
+          <Route 
+            path="/active" 
+            element={currentUser ? <ActiveTradesPage /> : <Navigate to="/login" replace />} 
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
