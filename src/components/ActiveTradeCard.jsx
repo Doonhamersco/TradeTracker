@@ -86,13 +86,18 @@ function ActiveTradeCard({ trade, livePrice, onViewDetails, onClosePosition }) {
           <div>
             <p className="text-gray-500 flex items-center gap-1">
               Current
-              {hasLivePrice && (
-                <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" title="Live price" />
+              {hasLivePrice ? (
+                <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" title="Live price from CoinGecko" />
+              ) : (
+                <span className="text-xs text-yellow-500" title="Manual price - not on CoinGecko">⚠️</span>
               )}
             </p>
             <p className={`font-medium ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
               {formatPrice(displayPrice)}
             </p>
+            {!hasLivePrice && (
+              <p className="text-xs text-yellow-600">Manual</p>
+            )}
           </div>
           <div>
             <p className="text-gray-500">Target</p>

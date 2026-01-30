@@ -218,3 +218,5 @@ function ClosePositionModal({ trade, onClose, userId }) {
 
 export default ClosePositionModal
 
+
+
