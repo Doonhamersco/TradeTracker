@@ -40,7 +40,7 @@ const ProfileDropdown = ({ currentUser, userProfile, onLogout, trades, onShowPNL
     if (onShowPNL) {
       onShowPNL()
     } else {
-      navigate('/pnl')
+      navigate('/analytics')
     }
   }
 
