@@ -4,41 +4,60 @@ function LandingPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen text-white flex items-center justify-center relative overflow-hidden">
-      <div className="container mx-auto px-4 md:px-8 flex items-center justify-center gap-8 md:gap-12 w-full">
-        {/* Character Figure - Left side */}
-        <div className="hidden md:flex flex-shrink-0 items-center justify-center z-10 w-1/3 max-w-md">
-          <img
-            src="/character-side.png"
-            alt="Character illustration"
-            className="w-auto h-[70vh] max-h-[600px] object-contain opacity-90"
-            onError={(e) => {
-              console.warn('Character image not found. Please add character-side.png to the public folder.')
-              e.target.style.display = 'none'
-            }}
-          />
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="max-w-4xl mx-auto px-6 md:px-12 py-16">
+        {/* Main Content */}
+        <div className="brutal-section p-8 md:p-16 text-center">
+          <h1 className="brutal-title text-6xl md:text-8xl lg:text-9xl mb-6 tracking-tighter">
+            TRADE
+            <br />
+            TRACKER
+          </h1>
+          <p className="text-xl md:text-2xl font-bold uppercase tracking-wider mb-4">
+            BY DOONHAMER
+          </p>
+          <p className="text-lg text-gray-600 mb-12 uppercase">
+            A TOOL TO MANUALLY TRACK YOUR TRADES
+          </p>
+          
+          <button
+            onClick={() => navigate('/login')}
+            className="brutal-btn text-xl px-16 py-6"
+          >
+            GET STARTED →
+          </button>
+
+          {/* Features */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-0 mt-16 border-t-6 border-black">
+            <div className="p-6 border-r-0 md:border-r-2 border-b-2 md:border-b-0 border-black">
+              <div className="text-4xl mb-4">📊</div>
+              <h3 className="font-bold uppercase mb-2">TRADE HISTORY</h3>
+              <p className="text-sm text-gray-600 uppercase">
+                LOG AND TRACK ALL YOUR TRADES
+              </p>
+            </div>
+            <div className="p-6 border-r-0 md:border-r-2 border-b-2 md:border-b-0 border-black">
+              <div className="text-4xl mb-4">📅</div>
+              <h3 className="font-bold uppercase mb-2">PNL CALENDAR</h3>
+              <p className="text-sm text-gray-600 uppercase">
+                VISUALIZE DAILY PERFORMANCE
+              </p>
+            </div>
+            <div className="p-6">
+              <div className="text-4xl mb-4">🎯</div>
+              <h3 className="font-bold uppercase mb-2">ACTIVE TRADES</h3>
+              <p className="text-sm text-gray-600 uppercase">
+                TRACK OPEN POSITIONS LIVE
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Content Box - Right side */}
-        <div className="relative z-20 text-left flex-1 max-w-2xl">
-          {/* Semi-transparent background for text readability */}
-          <div className="bg-black/60 backdrop-blur-sm rounded-2xl p-8 md:p-12 border border-gray-800/50">
-            <h1 className="text-5xl md:text-7xl font-bold mb-4 text-white drop-shadow-2xl">
-              Trade Tracker
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-200 mb-8 drop-shadow-lg font-semibold">
-              by Doonhamer
-            </p>
-            <p className="text-base md:text-lg text-gray-300 mb-12 leading-relaxed">
-              A tool to manually track your trades.
-            </p>
-            <button
-              onClick={() => navigate('/login')}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-12 rounded-lg text-lg transition-all duration-200 shadow-2xl hover:shadow-blue-500/50 transform hover:-translate-y-1"
-            >
-              Get Started
-            </button>
-          </div>
+        {/* Footer */}
+        <div className="mt-8 text-center">
+          <p className="text-sm font-mono text-gray-500">
+            © {new Date().getFullYear()} TRADE TRACKER
+          </p>
         </div>
       </div>
     </div>
@@ -46,4 +65,3 @@ function LandingPage() {
 }
 
 export default LandingPage
-

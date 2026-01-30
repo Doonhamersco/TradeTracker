@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react'
-import { Share2, X, Download, Copy } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import { useAuth } from '../contexts/AuthContext'
 import { ref, getBlob } from 'firebase/storage'
@@ -14,49 +13,37 @@ const SharePNL = ({ trade }) => {
   const [imageReady, setImageReady] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   
-  // Determine if this is a winning or losing trade
   const isWinning = trade.profitUSD > 0
   const backgroundUrl = isWinning 
     ? (userProfile?.winningTradeBackground || '/jupiter-bg.png')
     : (userProfile?.losingTradeBackground || '/jupiter-bg.png')
   
-  // Load image - use Firebase Storage getBlob to bypass CORS issues
   useEffect(() => {
     if (!backgroundUrl) {
-      console.log('No backgroundUrl provided')
       return
     }
     
-    console.log('Loading background image:', backgroundUrl)
     setImageReady(false)
     
     const loadImage = async () => {
       try {
-        // If it's a local file, use it directly
         if (backgroundUrl.startsWith('/')) {
-          console.log('Loading local file:', backgroundUrl)
           const img = new Image()
           img.onload = () => {
-            console.log('Local image loaded, dimensions:', img.naturalWidth, img.naturalHeight)
             setImageDimensions({ width: img.naturalWidth || img.width || 800, height: img.naturalHeight || img.height || 1000 })
             setBackgroundDataUrl(backgroundUrl)
             setImageReady(true)
           }
-          img.onerror = (error) => {
-            console.error('Error loading local image:', error)
+          img.onerror = () => {
             setImageReady(false)
           }
           img.src = backgroundUrl
           return
         }
         
-        // For Firebase Storage URLs, use Firebase SDK to get blob directly (avoids CORS)
         let dataUrl = backgroundUrl
         
-        // Check if it's a Firebase Storage URL
         if (backgroundUrl.includes('firebasestorage.googleapis.com')) {
-          console.log('Detected Firebase Storage URL, extracting path...')
-          // Extract path from URL: https://firebasestorage.googleapis.com/v0/b/{bucket}/o/{path}?alt=media&token={token}
           const urlMatch = backgroundUrl.match(/\/o\/([^?]+)/)
           if (!urlMatch) {
             throw new Error('Could not extract path from Firebase Storage URL')
@@ -64,60 +51,43 @@ const SharePNL = ({ trade }) => {
           
           const encodedPath = urlMatch[1]
           const decodedPath = decodeURIComponent(encodedPath)
-          console.log('Extracted Storage path:', decodedPath)
           
-          // Use Firebase Storage SDK to get blob directly (bypasses CORS)
           const storageRef = ref(storage, decodedPath)
-          console.log('Getting blob from Firebase Storage...')
           
           try {
             const blob = await getBlob(storageRef)
-            console.log('Got blob from Firebase Storage, size:', blob.size)
             
-            // Convert blob to data URL
             dataUrl = await new Promise((resolve, reject) => {
               const reader = new FileReader()
               reader.onloadend = () => resolve(reader.result)
               reader.onerror = reject
               reader.readAsDataURL(blob)
             })
-            console.log('Converted blob to data URL')
           } catch (error) {
-            console.error('getBlob() failed:', error)
             throw new Error(`Failed to get blob from Firebase Storage: ${error.message}`)
           }
         }
         
-        // Load image to get dimensions
         const img = new Image()
         
         await new Promise((resolve, reject) => {
           img.onload = () => {
-            console.log('Image loaded, dimensions:', img.naturalWidth, img.naturalHeight)
             setImageDimensions({ 
               width: img.naturalWidth || img.width || 800, 
               height: img.naturalHeight || img.height || 1000 
             })
-            setBackgroundDataUrl(dataUrl) // Use the data URL (no CORS issues)
+            setBackgroundDataUrl(dataUrl)
             setImageReady(true)
-            console.log('✅ Background image loaded successfully')
             resolve()
           }
           img.onerror = (error) => {
-            console.error('❌ Error loading image:', error)
             setImageReady(false)
             reject(error)
           }
           img.src = dataUrl
         })
       } catch (error) {
-        console.error('❌ Error loading background image:', error)
-        console.error('Error details:', {
-          message: error.message,
-          name: error.name,
-          code: error.code,
-          backgroundUrl: backgroundUrl?.substring(0, 100)
-        })
+        console.error('Error loading background image:', error)
         setImageReady(false)
       }
     }
@@ -125,7 +95,6 @@ const SharePNL = ({ trade }) => {
     loadImage()
   }, [backgroundUrl])
 
-  // Capture the card as an image on-demand (only when exporting)
   const captureCard = async () => {
     if (!cardRef.current || !imageReady) {
       throw new Error('Card not ready')
@@ -182,7 +151,6 @@ const SharePNL = ({ trade }) => {
           text: `Check out my ${trade.coinName} trade: ${formatCurrency(trade.profitUSD)} profit!`
         })
       } else {
-        // Fallback: download the image
         await handleDownloadWithDataUrl(dataUrl)
       }
     } catch (error) {
@@ -251,160 +219,137 @@ const SharePNL = ({ trade }) => {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className={`px-3 py-1.5 text-white text-sm font-medium rounded-lg transition-colors duration-200 flex items-center gap-1.5 ${
+        className={`border-2 px-3 py-1 text-xs font-bold uppercase transition-colors ${
           isWinning 
-            ? 'bg-green-600 hover:bg-green-700' 
-            : 'bg-red-600 hover:bg-red-700'
+            ? 'border-green-700 text-green-700 hover:bg-green-700 hover:text-white' 
+            : 'border-red-700 text-red-700 hover:bg-red-700 hover:text-white'
         }`}
         title="Share PNL"
       >
-        <Share2 className="w-4 h-4" />
-        Share
+        SHARE
       </button>
 
       {isOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setIsOpen(false)}>
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setIsOpen(false)}>
           <div 
-            className="bg-gray-900 rounded-xl shadow-2xl border border-gray-800 w-full max-w-2xl p-6"
+            className="brutal-section w-full max-w-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-white">Share PNL</h3>
+            {/* Header */}
+            <div className="border-b-6 border-black p-6 flex items-center justify-between">
+              <h3 className="brutal-title text-xl">SHARE PNL</h3>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+                className="w-10 h-10 border-2 border-black hover:bg-black hover:text-white transition-colors font-bold text-xl"
               >
-                <X className="w-5 h-5 text-gray-400" />
+                ✕
               </button>
             </div>
 
-            {/* Shareable Card Preview - ALWAYS shows the HTML card */}
-            <div 
-              className="mb-4 rounded-lg overflow-hidden border border-gray-700"
-              style={{
-                userSelect: 'none',
-                WebkitUserSelect: 'none',
-                MozUserSelect: 'none',
-                msUserSelect: 'none',
-                position: 'relative'
-              }}
-            >
-              {/* Loading state - only while background image loads */}
-              {!imageReady && (
-                <div className="w-full flex items-center justify-center bg-gray-800" style={{ minHeight: '400px' }}>
-                  <div className="text-center">
-                    <p className="text-gray-400 mb-2">Loading image...</p>
-                    <p className="text-gray-500 text-sm">Please wait while we prepare your PNL card</p>
-                  </div>
-                </div>
-              )}
-              
-              {/* Exporting overlay */}
-              {isExporting && (
-                <div className="absolute inset-0 bg-black/50 z-20 flex items-center justify-center">
-                  <p className="text-white font-medium">Exporting...</p>
-                </div>
-              )}
-              
-              {/* THE PREVIEW - always show this HTML card directly */}
-              <div
-                ref={cardRef}
-                className="relative w-full bg-cover bg-center bg-gradient-to-br from-blue-900 via-purple-900 to-black"
+            {/* Card Preview */}
+            <div className="p-6">
+              <div 
+                className="mb-4 border-2 border-black overflow-hidden"
                 style={{
-                  display: imageReady ? 'block' : 'none',
-                  pointerEvents: 'none',
                   userSelect: 'none',
-                  WebkitUserSelect: 'none',
-                  MozUserSelect: 'none',
-                  msUserSelect: 'none',
-                  backgroundImage: `url(${backgroundDataUrl || backgroundUrl})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  aspectRatio: `${imageDimensions.width} / ${imageDimensions.height}`,
-                  minHeight: '400px',
-                  width: '100%',
-                  maxWidth: '100%'
+                  position: 'relative'
                 }}
               >
-                {/* Dark overlay for better text readability */}
-                <div className="absolute inset-0 bg-black/20 z-0"></div>
-                
-                {/* Overlay content */}
-                <div className="relative z-10 h-full flex flex-col justify-between p-3">
-                  {/* Coin Name - Top Left */}
-                  <div className="text-left">
-                    <h2 className="text-5xl md:text-6xl font-bold text-white drop-shadow-lg" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
-                      {trade.coinName || 'N/A'}
-                    </h2>
+                {!imageReady && (
+                  <div className="w-full flex items-center justify-center bg-gray-100" style={{ minHeight: '400px' }}>
+                    <p className="font-bold uppercase">LOADING IMAGE...</p>
                   </div>
-
-                  {/* Bottom Section */}
-                  <div className="text-left">
-                    {/* Profit USD */}
-                    <div className="mb-4">
-                      <div className={`${isWinning ? 'bg-green-500' : 'bg-red-500'} rounded-lg shadow-xl`} style={{ 
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '12px 24px',
-                        position: 'relative', 
-                        zIndex: 1
-                      }}>
-                        <span className="text-4xl md:text-5xl font-bold text-white whitespace-nowrap" style={{ 
-                          color: '#ffffff',
-                          WebkitTextFillColor: '#ffffff',
-                          textShadow: 'none',
-                          lineHeight: '1',
-                          display: 'block'
-                        }}>
-                          {formatCurrency(trade.profitUSD)}
-                        </span>
-                      </div>
+                )}
+                
+                {isExporting && (
+                  <div className="absolute inset-0 bg-black/50 z-20 flex items-center justify-center">
+                    <p className="text-white font-bold uppercase">EXPORTING...</p>
+                  </div>
+                )}
+                
+                <div
+                  ref={cardRef}
+                  className="relative w-full bg-cover bg-center bg-gradient-to-br from-blue-900 via-purple-900 to-black"
+                  style={{
+                    display: imageReady ? 'block' : 'none',
+                    pointerEvents: 'none',
+                    backgroundImage: `url(${backgroundDataUrl || backgroundUrl})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    aspectRatio: `${imageDimensions.width} / ${imageDimensions.height}`,
+                    minHeight: '400px',
+                    width: '100%'
+                  }}
+                >
+                  <div className="absolute inset-0 bg-black/20 z-0"></div>
+                  
+                  <div className="relative z-10 h-full flex flex-col justify-between p-3">
+                    <div className="text-left">
+                      <h2 className="text-5xl md:text-6xl font-bold text-white drop-shadow-lg" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
+                        {trade.coinName || 'N/A'}
+                      </h2>
                     </div>
 
-                    {/* Bought and PnL % */}
-                    <div className="flex items-end gap-6">
-                      <div>
-                        <p className="text-white text-sm mb-1 opacity-90" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>Bought</p>
-                        <p className="text-2xl md:text-3xl font-bold text-white drop-shadow-lg" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
-                          {formatCompactCurrency(trade.entrySize)}
-                        </p>
+                    <div className="text-left">
+                      <div className="mb-4">
+                        <div className={`${isWinning ? 'bg-green-500' : 'bg-red-500'} shadow-xl`} style={{ 
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '12px 24px'
+                        }}>
+                          <span className="text-4xl md:text-5xl font-bold text-white whitespace-nowrap" style={{ 
+                            color: '#ffffff',
+                            lineHeight: '1'
+                          }}>
+                            {formatCurrency(trade.profitUSD)}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-white text-sm mb-1 opacity-90" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>PnL %</p>
-                        <p className={`text-2xl md:text-3xl font-bold drop-shadow-lg ${isWinning ? 'text-green-400' : 'text-red-400'}`} style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
-                          {formatPercent(trade.profitPercent)}
-                        </p>
+
+                      <div className="flex items-end gap-6">
+                        <div>
+                          <p className="text-white text-sm mb-1 opacity-90" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>Bought</p>
+                          <p className="text-2xl md:text-3xl font-bold text-white drop-shadow-lg" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
+                            {formatCompactCurrency(trade.entrySize)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-white text-sm mb-1 opacity-90" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}>PnL %</p>
+                          <p className={`text-2xl md:text-3xl font-bold drop-shadow-lg ${isWinning ? 'text-green-400' : 'text-red-400'}`} style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
+                            {formatPercent(trade.profitPercent)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3">
-              <button
-                onClick={handleShare}
-                className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-              >
-                <Share2 className="w-5 h-5" />
-                Share
-              </button>
-              <button
-                onClick={handleCopy}
-                className="flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-                title="Copy to clipboard"
-              >
-                <Copy className="w-5 h-5" />
-              </button>
-              <button
-                onClick={handleDownload}
-                className="flex items-center justify-center gap-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-                title="Download"
-              >
-                <Download className="w-5 h-5" />
-              </button>
+              {/* Action Buttons */}
+              <div className="grid grid-cols-3 border-2 border-black">
+                <button
+                  onClick={handleShare}
+                  disabled={isExporting}
+                  className="p-4 font-bold uppercase hover:bg-black hover:text-white transition-colors border-r-2 border-black disabled:opacity-50"
+                >
+                  SHARE
+                </button>
+                <button
+                  onClick={handleCopy}
+                  disabled={isExporting}
+                  className="p-4 font-bold uppercase hover:bg-black hover:text-white transition-colors border-r-2 border-black disabled:opacity-50"
+                >
+                  COPY
+                </button>
+                <button
+                  onClick={handleDownload}
+                  disabled={isExporting}
+                  className="p-4 font-bold uppercase hover:bg-black hover:text-white transition-colors disabled:opacity-50"
+                >
+                  DOWNLOAD
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -414,5 +359,3 @@ const SharePNL = ({ trade }) => {
 }
 
 export default SharePNL
-
-

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, ArrowLeft, RefreshCw } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { subscribeToActiveTrades } from '../services/activeTradesService'
 import { fetchMultiplePrices } from '../services/priceService'
@@ -25,7 +24,6 @@ function ActiveTradesPage() {
   const [lastPriceUpdate, setLastPriceUpdate] = useState(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
 
-  // Subscribe to active trades
   useEffect(() => {
     if (!currentUser?.uid) {
       setTrades([])
@@ -46,7 +44,6 @@ function ActiveTradesPage() {
     return () => unsubscribe()
   }, [currentUser])
 
-  // Fetch live prices from CoinGecko
   const fetchLivePrices = useCallback(async () => {
     if (trades.length === 0) return
     
@@ -61,20 +58,18 @@ function ActiveTradesPage() {
     setPricesLoading(false)
   }, [trades])
 
-  // Fetch prices when trades change
   useEffect(() => {
     if (trades.length > 0) {
       fetchLivePrices()
     }
-  }, [trades.length]) // Only refetch when number of trades changes
+  }, [trades.length])
 
-  // Auto-refresh prices every 30 seconds
   useEffect(() => {
     if (!autoRefresh || trades.length === 0) return
     
     const interval = setInterval(() => {
       fetchLivePrices()
-    }, 30000) // 30 seconds
+    }, 30000)
     
     return () => clearInterval(interval)
   }, [autoRefresh, fetchLivePrices, trades.length])
@@ -93,144 +88,120 @@ function ActiveTradesPage() {
     await signout()
   }
 
-  return (
-    <div className="min-h-screen text-white relative z-10">
-      {/* Background */}
-      <div className="fixed inset-0 w-full h-full -z-10 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800" />
-      </div>
+  // Calculate total stats
+  const totalInvested = trades.reduce((sum, t) => sum + (t.positionSize || 0), 0)
+  const totalPnL = trades.reduce((sum, t) => {
+    const currentPrice = livePrices[t.assetName.toUpperCase()] || t.currentPrice
+    const pnl = ((currentPrice - t.entryPrice) / t.entryPrice) * t.positionSize
+    return sum + pnl
+  }, 0)
+  const winningTrades = trades.filter(t => {
+    const currentPrice = livePrices[t.assetName.toUpperCase()] || t.currentPrice
+    return currentPrice > t.entryPrice
+  }).length
+  const winRate = trades.length > 0 ? (winningTrades / trades.length * 100).toFixed(0) : 0
 
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Header */}
-        <header className="mb-8">
+  return (
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <header className="border-b-6 border-black">
+        <div className="max-w-7xl mx-auto px-6 md:px-12 py-6">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
+            <div>
               <button
                 onClick={() => navigate('/trades')}
-                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-                title="Back to Trade History"
+                className="text-sm font-bold uppercase tracking-wider hover:underline mb-4 inline-block"
               >
-                <ArrowLeft className="w-6 h-6 text-gray-400" />
+                ← BACK TO TRADES
               </button>
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-white">Active Trades</h1>
-                <p className="text-gray-400">Track your open positions</p>
-              </div>
+              <h1 className="brutal-title text-4xl md:text-6xl lg:text-7xl tracking-tight">
+                ACTIVE TRADES
+              </h1>
             </div>
-            <div className="flex items-center gap-2 sm:gap-4">
-              {/* Refresh Prices */}
-              <button
-                onClick={fetchLivePrices}
-                disabled={pricesLoading}
-                className={`flex items-center gap-1 py-2 px-3 rounded-lg transition-colors ${
-                  pricesLoading ? 'bg-gray-700 text-gray-400' : 'bg-gray-800 hover:bg-gray-700 text-gray-300'
-                }`}
-                title={lastPriceUpdate ? `Last updated: ${lastPriceUpdate.toLocaleTimeString()}` : 'Refresh prices'}
-              >
-                <RefreshCw className={`w-4 h-4 ${pricesLoading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline text-sm">
-                  {pricesLoading ? 'Updating...' : 'Refresh'}
-                </span>
-              </button>
-              
-              {/* Auto-refresh toggle */}
-              <button
-                onClick={() => setAutoRefresh(!autoRefresh)}
-                className={`py-2 px-3 rounded-lg text-sm transition-colors ${
-                  autoRefresh ? 'bg-green-600/20 text-green-400 border border-green-600' : 'bg-gray-800 text-gray-400'
-                }`}
-                title={autoRefresh ? 'Auto-refresh ON (30s)' : 'Auto-refresh OFF'}
-              >
-                {autoRefresh ? 'Live' : 'Paused'}
-              </button>
-              
-              <button
-                onClick={() => setShowAddForm(true)}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-              >
-                <Plus className="w-5 h-5" />
-                <span className="hidden sm:inline">Add Trade</span>
-              </button>
-              <ProfileDropdown
-                currentUser={currentUser}
-                userProfile={userProfile}
-                onLogout={handleLogout}
-                trades={trades}
-                onShowPNL={() => navigate('/pnl')}
-                onShowProfile={() => {}}
-              />
-            </div>
+            <ProfileDropdown
+              currentUser={currentUser}
+              userProfile={userProfile}
+              onLogout={handleLogout}
+              trades={trades}
+              onShowPNL={() => navigate('/pnl')}
+              onShowProfile={() => {}}
+            />
           </div>
-        </header>
+          
+          {/* Actions */}
+          <div className="flex gap-4 mt-8 flex-wrap">
+            <button 
+              onClick={() => setShowAddForm(true)}
+              className="brutal-btn"
+            >
+              + ADD TRADE
+            </button>
+            <button 
+              onClick={fetchLivePrices}
+              disabled={pricesLoading}
+              className="brutal-btn brutal-btn-secondary"
+            >
+              {pricesLoading ? 'UPDATING...' : '↻ REFRESH PRICES'}
+            </button>
+            <button 
+              onClick={() => setAutoRefresh(!autoRefresh)}
+              className={`brutal-btn ${autoRefresh ? '' : 'brutal-btn-secondary'}`}
+            >
+              {autoRefresh ? '● LIVE' : '○ PAUSED'}
+            </button>
+            {lastPriceUpdate && (
+              <span className="text-sm font-mono self-center">
+                LAST UPDATE: {lastPriceUpdate.toLocaleTimeString()}
+              </span>
+            )}
+          </div>
+        </div>
+      </header>
 
+      <main className="max-w-7xl mx-auto px-6 md:px-12 py-12">
         {/* Stats Summary */}
         {trades.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
-              <p className="text-gray-400 text-sm">Active Positions</p>
-              <p className="text-2xl font-bold text-white">{trades.length}</p>
+          <section className="brutal-section mb-12">
+            <div className="grid grid-cols-2 md:grid-cols-4">
+              <div className="p-6 border-r-2 border-b-2 md:border-b-0 border-black">
+                <p className="text-xs font-bold uppercase tracking-wider mb-2">ACTIVE POSITIONS</p>
+                <p className="text-3xl font-bold font-mono">{trades.length}</p>
+              </div>
+              <div className="p-6 border-b-2 md:border-b-0 md:border-r-2 border-black">
+                <p className="text-xs font-bold uppercase tracking-wider mb-2">TOTAL INVESTED</p>
+                <p className="text-3xl font-bold font-mono">${totalInvested.toLocaleString()}</p>
+              </div>
+              <div className="p-6 border-r-2 border-black">
+                <p className="text-xs font-bold uppercase tracking-wider mb-2">UNREALIZED P&L</p>
+                <p className={`text-3xl font-bold font-mono ${totalPnL >= 0 ? 'text-profit' : 'text-loss'}`}>
+                  {totalPnL >= 0 ? '+' : ''}{totalPnL.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
+                </p>
+              </div>
+              <div className="p-6">
+                <p className="text-xs font-bold uppercase tracking-wider mb-2">WIN RATE</p>
+                <p className="text-3xl font-bold font-mono">{winRate}%</p>
+              </div>
             </div>
-            <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
-              <p className="text-gray-400 text-sm">Total Invested</p>
-              <p className="text-2xl font-bold text-white">
-                ${trades.reduce((sum, t) => sum + (t.positionSize || 0), 0).toLocaleString()}
-              </p>
-            </div>
-            <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
-              <p className="text-gray-400 text-sm">Unrealized P&L</p>
-              {(() => {
-                const totalPnL = trades.reduce((sum, t) => {
-                  // Use live price if available, otherwise use stored currentPrice
-                  const currentPrice = livePrices[t.assetName.toUpperCase()] || t.currentPrice
-                  const pnl = ((currentPrice - t.entryPrice) / t.entryPrice) * t.positionSize
-                  return sum + pnl
-                }, 0)
-                return (
-                  <p className={`text-2xl font-bold ${totalPnL >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {totalPnL >= 0 ? '+' : ''}{totalPnL.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}
-                  </p>
-                )
-              })()}
-            </div>
-            <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
-              <p className="text-gray-400 text-sm">Win Rate</p>
-              {(() => {
-                const winning = trades.filter(t => {
-                  const currentPrice = livePrices[t.assetName.toUpperCase()] || t.currentPrice
-                  return currentPrice > t.entryPrice
-                }).length
-                const winRate = trades.length > 0 ? (winning / trades.length * 100).toFixed(0) : 0
-                return (
-                  <p className="text-2xl font-bold text-white">{winRate}%</p>
-                )
-              })()}
-            </div>
-          </div>
+          </section>
         )}
 
-        {/* Active Trades Grid */}
+        {/* Trades Grid */}
         {loading ? (
-          <div className="text-center py-12">
-            <p className="text-gray-400 text-lg">Loading active trades...</p>
+          <div className="brutal-section p-16 text-center">
+            <p className="brutal-title text-xl">LOADING...</p>
           </div>
         ) : trades.length === 0 ? (
-          <div className="text-center py-16 bg-gray-900 rounded-xl border border-gray-800">
-            <div className="max-w-md mx-auto">
-              <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Plus className="w-8 h-8 text-gray-500" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">No Active Trades</h3>
-              <p className="text-gray-400 mb-6">
-                Start tracking your open positions. Add your first active trade to monitor your thesis and P&L in real-time.
-              </p>
-              <button
-                onClick={() => setShowAddForm(true)}
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-              >
-                <Plus className="w-5 h-5" />
-                Add Your First Trade
-              </button>
-            </div>
+          <div className="brutal-section p-16 text-center">
+            <p className="brutal-title text-3xl mb-4">NO ACTIVE TRADES</p>
+            <p className="text-gray-600 uppercase text-sm tracking-wider mb-8">
+              Start tracking your open positions
+            </p>
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="brutal-btn"
+            >
+              + ADD YOUR FIRST TRADE
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -245,9 +216,21 @@ function ActiveTradesPage() {
             ))}
           </div>
         )}
-      </div>
+      </main>
 
-      {/* Add Trade Form Modal */}
+      {/* Footer */}
+      <footer className="border-t-6 border-black mt-16">
+        <div className="max-w-7xl mx-auto px-6 md:px-12 py-8 flex justify-between items-center">
+          <p className="text-sm font-bold uppercase tracking-wider">
+            TRADE TRACKER BY DOONHAMER
+          </p>
+          <p className="text-sm font-mono">
+            {new Date().getFullYear()}
+          </p>
+        </div>
+      </footer>
+
+      {/* Modals */}
       {showAddForm && (
         <AddActiveTradeForm
           onClose={() => setShowAddForm(false)}
@@ -255,7 +238,6 @@ function ActiveTradesPage() {
         />
       )}
 
-      {/* Trade Detail Modal */}
       {showDetailModal && selectedTrade && (
         <ActiveTradeDetailModal
           trade={selectedTrade}
@@ -270,7 +252,6 @@ function ActiveTradesPage() {
         />
       )}
 
-      {/* Close Position Modal */}
       {showCloseModal && tradeToClose && (
         <ClosePositionModal
           trade={tradeToClose}
@@ -286,4 +267,3 @@ function ActiveTradesPage() {
 }
 
 export default ActiveTradesPage
-

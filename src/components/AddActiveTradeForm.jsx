@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { X } from 'lucide-react'
 import { addActiveTrade, calculateRiskReward } from '../services/activeTradesService'
 
 function AddActiveTradeForm({ onClose, userId }) {
@@ -17,7 +16,6 @@ function AddActiveTradeForm({ onClose, userId }) {
     category: 'Fibonacci'
   })
 
-  // Calculate R:R in real-time
   const riskReward = formData.entryPrice && formData.targetPrice && formData.stopLoss
     ? calculateRiskReward(
         parseFloat(formData.entryPrice),
@@ -35,7 +33,6 @@ function AddActiveTradeForm({ onClose, userId }) {
     e.preventDefault()
     setError('')
 
-    // Validation
     if (!formData.assetName.trim()) {
       setError('Please enter an asset name')
       return
@@ -106,51 +103,50 @@ function AddActiveTradeForm({ onClose, userId }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div 
+      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 overflow-y-auto"
+      onClick={onClose}
+    >
       <div 
-        className="bg-gray-900 rounded-xl shadow-2xl border border-gray-800 w-full max-w-2xl my-8"
+        className="brutal-section w-full max-w-2xl my-8"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-800">
-          <h2 className="text-2xl font-bold text-white">Add Active Trade</h2>
+        <div className="border-b-6 border-black p-6 flex items-center justify-between">
+          <h2 className="brutal-title text-2xl">ADD ACTIVE TRADE</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+            className="w-10 h-10 border-2 border-black hover:bg-black hover:text-white transition-colors font-bold text-xl"
           >
-            <X className="w-5 h-5 text-gray-400" />
+            ✕
           </button>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {error && (
-            <div className="p-3 bg-red-900/30 border border-red-700 rounded-lg text-red-300 text-sm">
+            <div className="p-4 border-2 border-red-700 bg-red-50 text-red-700 text-sm font-bold uppercase">
               {error}
             </div>
           )}
 
           {/* Asset Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Asset Name / Ticker *
-            </label>
+            <label className="brutal-label">ASSET NAME / TICKER *</label>
             <input
               type="text"
               name="assetName"
               value={formData.assetName}
               onChange={handleChange}
-              placeholder="e.g., SOL, BONK, WIF"
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-500 uppercase"
+              placeholder="E.G., SOL, BONK, WIF"
+              className="brutal-input uppercase"
             />
           </div>
 
-          {/* Price Inputs - Grid */}
+          {/* Price Inputs */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Entry Price (USD) *
-              </label>
+              <label className="brutal-label">ENTRY PRICE (USD) *</label>
               <input
                 type="number"
                 name="entryPrice"
@@ -159,13 +155,11 @@ function AddActiveTradeForm({ onClose, userId }) {
                 step="any"
                 min="0"
                 placeholder="0.00"
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-500"
+                className="brutal-input"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Target Price (USD) *
-              </label>
+              <label className="brutal-label text-profit">TARGET PRICE (USD) *</label>
               <input
                 type="number"
                 name="targetPrice"
@@ -174,13 +168,11 @@ function AddActiveTradeForm({ onClose, userId }) {
                 step="any"
                 min="0"
                 placeholder="0.00"
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-white placeholder-gray-500"
+                className="brutal-input border-green-700"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Stop Loss (USD) *
-              </label>
+              <label className="brutal-label text-loss">STOP LOSS (USD) *</label>
               <input
                 type="number"
                 name="stopLoss"
@@ -189,28 +181,26 @@ function AddActiveTradeForm({ onClose, userId }) {
                 step="any"
                 min="0"
                 placeholder="0.00"
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-white placeholder-gray-500"
+                className="brutal-input border-red-700"
               />
             </div>
           </div>
 
           {/* Risk/Reward Display */}
           {riskReward > 0 && (
-            <div className="flex items-center gap-2 p-3 bg-gray-800 rounded-lg">
-              <span className="text-gray-400">Risk/Reward Ratio:</span>
-              <span className={`font-bold ${riskReward >= 2 ? 'text-green-400' : riskReward >= 1 ? 'text-yellow-400' : 'text-red-400'}`}>
+            <div className="p-4 border-2 border-black flex items-center justify-between">
+              <span className="font-bold uppercase text-sm">RISK/REWARD RATIO:</span>
+              <span className={`font-bold font-mono text-xl ${riskReward >= 2 ? 'text-profit' : riskReward >= 1 ? 'text-yellow-600' : 'text-loss'}`}>
                 R:R {riskReward.toFixed(2)}:1
               </span>
-              {riskReward >= 2 && <span className="text-xs text-green-400 ml-2">✓ Good R:R</span>}
+              {riskReward >= 2 && <span className="text-xs font-bold text-profit">✓ GOOD R:R</span>}
             </div>
           )}
 
           {/* Position Size and Category */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Position Size (USD) *
-              </label>
+              <label className="brutal-label">POSITION SIZE (USD) *</label>
               <input
                 type="number"
                 name="positionSize"
@@ -218,87 +208,79 @@ function AddActiveTradeForm({ onClose, userId }) {
                 onChange={handleChange}
                 step="0.01"
                 min="0"
-                placeholder="How much capital invested"
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-500"
+                placeholder="CAPITAL INVESTED"
+                className="brutal-input"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Category *
-              </label>
+              <label className="brutal-label">CATEGORY *</label>
               <select
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                className="brutal-input"
               >
-                <option value="Fibonacci">Fibonacci</option>
-                <option value="Degen">Degen</option>
-                <option value="Conviction">Conviction</option>
+                <option value="Fibonacci">FIBONACCI</option>
+                <option value="Degen">DEGEN</option>
+                <option value="Conviction">CONVICTION</option>
               </select>
             </div>
           </div>
 
           {/* Chart Link */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Chart Link
-            </label>
+            <label className="brutal-label">CHART LINK</label>
             <input
               type="url"
               name="chartLink"
               value={formData.chartLink}
               onChange={handleChange}
-              placeholder="https://dexscreener.com/... or TradingView link"
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-500"
+              placeholder="HTTPS://DEXSCREENER.COM/..."
+              className="brutal-input"
             />
           </div>
 
           {/* Thesis - Two Columns */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-green-400 mb-2">
-                Why This Can Win *
-              </label>
+              <label className="brutal-label text-profit">WHY THIS CAN WIN *</label>
               <textarea
                 name="whyCanWin"
                 value={formData.whyCanWin}
                 onChange={handleChange}
                 rows={4}
-                placeholder="Bull case: catalysts, technicals, fundamentals..."
-                className="w-full px-4 py-3 bg-gray-800 border border-green-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-white placeholder-gray-500 resize-none"
+                placeholder="BULL CASE: CATALYSTS, TECHNICALS..."
+                className="brutal-input resize-none border-green-700"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-red-400 mb-2">
-                Why This Can Fail *
-              </label>
+              <label className="brutal-label text-loss">WHY THIS CAN FAIL *</label>
               <textarea
                 name="whyCanFail"
                 value={formData.whyCanFail}
                 onChange={handleChange}
                 rows={4}
-                placeholder="Bear case: risks, invalidation points, concerns..."
-                className="w-full px-4 py-3 bg-gray-800 border border-red-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 text-white placeholder-gray-500 resize-none"
+                placeholder="BEAR CASE: RISKS, CONCERNS..."
+                className="brutal-input resize-none border-red-700"
               />
             </div>
           </div>
 
-          {/* Submit Button */}
+          {/* Submit Buttons */}
           <div className="flex gap-4 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 px-6 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors"
+              className="brutal-btn brutal-btn-secondary flex-1"
             >
-              Cancel
+              CANCEL
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="brutal-btn flex-1"
             >
-              {loading ? 'Adding...' : 'Add Trade'}
+              {loading ? 'ADDING...' : 'ADD TRADE'}
             </button>
           </div>
         </form>
@@ -308,4 +290,3 @@ function AddActiveTradeForm({ onClose, userId }) {
 }
 
 export default AddActiveTradeForm
-

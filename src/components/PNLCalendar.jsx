@@ -1,25 +1,22 @@
 import { useState, useMemo } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 const PNLCalendar = ({ trades = [] }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date())
 
-  // Ensure trades is always an array
   const safeTrades = Array.isArray(trades) ? trades : []
 
   const formatCurrency = (value) => {
     if (isNaN(value) || value === null || value === undefined) {
-      return '$0.0'
+      return '$0'
     }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(value)
   }
 
-  // Process trades into daily summaries
   const dailySummaries = useMemo(() => {
     const summaries = {}
     
@@ -53,7 +50,6 @@ const PNLCalendar = ({ trades = [] }) => {
     return summaries
   }, [safeTrades])
 
-  // Get month stats
   const monthStats = useMemo(() => {
     try {
       const year = currentMonth.getFullYear()
@@ -128,7 +124,6 @@ const PNLCalendar = ({ trades = [] }) => {
     }
   }, [currentMonth, dailySummaries])
 
-  // Get calendar days for the month
   const calendarDays = useMemo(() => {
     try {
       const year = currentMonth.getFullYear()
@@ -162,9 +157,9 @@ const PNLCalendar = ({ trades = [] }) => {
     }
   }, [currentMonth, dailySummaries])
 
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                      'July', 'August', 'September', 'October', 'November', 'December']
-  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  const monthNames = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 
+                      'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER']
+  const dayNames = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN']
 
   const navigateMonth = (direction) => {
     try {
@@ -175,56 +170,37 @@ const PNLCalendar = ({ trades = [] }) => {
   }
 
   if (!monthStats || !calendarDays) {
-    return <div className="text-center py-12 text-gray-400">Loading calendar...</div>
+    return <div className="text-center py-12 font-bold uppercase">LOADING...</div>
   }
 
   return (
     <div>
-      {/* Month Navigation */}
-      <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={() => navigateMonth(-1)}
-          className="p-2 hover:bg-gray-800 rounded-lg transition-colors duration-200"
-          aria-label="Previous month"
-        >
-          <ChevronLeft className="w-5 h-5 text-gray-400" />
-        </button>
-        <h3 className="text-xl font-semibold text-white">
-          {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-        </h3>
-        <button
-          onClick={() => navigateMonth(1)}
-          className="p-2 hover:bg-gray-800 rounded-lg transition-colors duration-200"
-          aria-label="Next month"
-        >
-          <ChevronRight className="w-5 h-5 text-gray-400" />
-        </button>
-      </div>
-
       {/* Stats Bar */}
-      <div className="bg-gray-800/50 rounded-lg p-4 mb-6 border border-gray-700">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <p className="text-xs text-gray-400 mb-1">Net P&L</p>
-            <p className={`text-2xl font-bold ${monthStats.netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+      <div className="border-6 border-black mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4">
+          <div className="p-6 border-r-2 border-b-2 md:border-b-0 border-black">
+            <p className="text-xs font-bold uppercase tracking-wider mb-2">NET P&L</p>
+            <p className={`text-3xl font-bold font-mono ${monthStats.netProfit >= 0 ? 'text-profit' : 'text-loss'}`}>
               {formatCurrency(monthStats.netProfit)}
             </p>
           </div>
-          <div>
-            <p className="text-xs text-gray-400 mb-1">Wins</p>
-            <p className="text-lg font-semibold text-green-400">
-              {monthStats.winningDays} / {formatCurrency(monthStats.totalProfit)}
+          <div className="p-6 border-b-2 md:border-b-0 md:border-r-2 border-black">
+            <p className="text-xs font-bold uppercase tracking-wider mb-2">WINS</p>
+            <p className="text-2xl font-bold text-profit">
+              {monthStats.winningDays} DAYS
             </p>
+            <p className="text-sm font-mono text-profit">{formatCurrency(monthStats.totalProfit)}</p>
           </div>
-          <div>
-            <p className="text-xs text-gray-400 mb-1">Losses</p>
-            <p className="text-lg font-semibold text-red-400">
-              {monthStats.losingDays} / {formatCurrency(monthStats.totalLoss)}
+          <div className="p-6 border-r-2 border-black">
+            <p className="text-xs font-bold uppercase tracking-wider mb-2">LOSSES</p>
+            <p className="text-2xl font-bold text-loss">
+              {monthStats.losingDays} DAYS
             </p>
+            <p className="text-sm font-mono text-loss">-{formatCurrency(monthStats.totalLoss)}</p>
           </div>
-          <div>
-            <p className="text-xs text-gray-400 mb-1">Win Rate</p>
-            <p className="text-lg font-semibold text-white">
+          <div className="p-6">
+            <p className="text-xs font-bold uppercase tracking-wider mb-2">WIN RATE</p>
+            <p className="text-3xl font-bold font-mono">
               {monthStats.winningDays + monthStats.losingDays > 0 
                 ? ((monthStats.winningDays / (monthStats.winningDays + monthStats.losingDays)) * 100).toFixed(0)
                 : 0}%
@@ -232,66 +208,86 @@ const PNLCalendar = ({ trades = [] }) => {
           </div>
         </div>
         
+        {/* Win/Loss Bar */}
         {monthStats.winningDays + monthStats.losingDays > 0 && (
-          <div className="mt-4 h-2 bg-gray-700 rounded-full overflow-hidden flex">
+          <div className="h-4 flex border-t-2 border-black">
             <div 
-              className="bg-green-500 h-full transition-all duration-300"
+              className="bg-profit h-full"
               style={{ width: `${(monthStats.winningDays / (monthStats.winningDays + monthStats.losingDays)) * 100}%` }}
-            ></div>
+            />
             <div 
-              className="bg-red-500 h-full transition-all duration-300"
+              className="bg-loss h-full"
               style={{ width: `${(monthStats.losingDays / (monthStats.winningDays + monthStats.losingDays)) * 100}%` }}
-            ></div>
+            />
           </div>
         )}
       </div>
 
+      {/* Month Navigation */}
+      <div className="flex items-center justify-between mb-6 border-6 border-black">
+        <button
+          onClick={() => navigateMonth(-1)}
+          className="p-4 hover:bg-black hover:text-white transition-colors font-bold text-2xl border-r-2 border-black"
+        >
+          ←
+        </button>
+        <h3 className="brutal-title text-xl md:text-2xl text-center flex-1 py-4">
+          {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+        </h3>
+        <button
+          onClick={() => navigateMonth(1)}
+          className="p-4 hover:bg-black hover:text-white transition-colors font-bold text-2xl border-l-2 border-black"
+        >
+          →
+        </button>
+      </div>
+
       {/* Calendar Grid */}
-      <div className="mb-6">
-        <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="border-6 border-black">
+        {/* Day Headers */}
+        <div className="grid grid-cols-7 border-b-2 border-black">
           {dayNames.map(day => (
-            <div key={day} className="text-center text-sm font-semibold text-gray-400 py-2">
+            <div key={day} className="text-center text-xs font-bold py-3 border-r border-black last:border-r-0">
               {day}
             </div>
           ))}
         </div>
         
-        <div className="grid grid-cols-7 gap-1">
+        {/* Days */}
+        <div className="grid grid-cols-7">
           {calendarDays.map((calendarDay, index) => {
             if (calendarDay.day === null) {
-              return <div key={`empty-${index}`} className="aspect-square"></div>
+              return <div key={`empty-${index}`} className="aspect-square border-r border-b border-black last:border-r-0 bg-gray-50" />
             }
             
             const { day, summary } = calendarDay
             const total = summary?.total || 0
             const tradesCount = summary?.trades || 0
             
+            let bgColor = 'bg-white'
+            let textColor = 'text-black'
+            
+            if (total > 0) {
+              bgColor = 'bg-profit'
+              textColor = 'text-white'
+            } else if (total < 0) {
+              bgColor = 'bg-loss'
+              textColor = 'text-white'
+            }
+            
             return (
               <div
                 key={day}
-                className={`aspect-square rounded-lg border border-gray-700 p-2 flex flex-col items-center justify-center transition-all duration-200 hover:scale-105 hover:border-gray-600 ${
-                  total > 0 
-                    ? `bg-green-500/20 border-green-500/30` 
-                    : total < 0 
-                    ? `bg-red-500/20 border-red-500/30` 
-                    : 'bg-gray-800/50'
-                }`}
-                style={{
-                  backgroundColor: total > 0 
-                    ? `rgba(34, 197, 94, ${0.2 + Math.min(Math.abs(total) / 500, 1) * 0.3})`
-                    : total < 0
-                    ? `rgba(239, 68, 68, ${0.2 + Math.min(Math.abs(total) / 500, 1) * 0.3})`
-                    : 'rgba(31, 41, 55, 0.5)'
-                }}
+                className={`aspect-square border-r border-b border-black last:border-r-0 p-2 flex flex-col items-center justify-center ${bgColor} ${textColor} transition-all hover:opacity-80`}
               >
-                <div className="text-xs text-gray-400 mb-1">{day}</div>
+                <div className="text-xs font-bold mb-1">{day}</div>
                 {total !== 0 && (
                   <>
-                    <div className={`text-xs font-semibold ${total > 0 ? 'text-green-300' : 'text-red-300'}`}>
+                    <div className="text-xs md:text-sm font-bold font-mono">
                       {formatCurrency(total)}
                     </div>
                     {tradesCount > 1 && (
-                      <div className="text-[10px] text-gray-500 mt-0.5">
+                      <div className="text-[10px] opacity-70 mt-0.5">
                         {tradesCount} trades
                       </div>
                     )}
@@ -304,43 +300,43 @@ const PNLCalendar = ({ trades = [] }) => {
       </div>
 
       {/* Footer Stats */}
-      <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {monthStats.bestDay.date && (
-            <div>
-              <p className="text-xs text-gray-400 mb-1">Best Day</p>
-              <p className="text-sm font-semibold text-green-400">
+      <div className="border-6 border-black border-t-0">
+        <div className="grid grid-cols-2 md:grid-cols-4">
+          {monthStats.bestDay.date && monthStats.bestDay.amount > -Infinity && (
+            <div className="p-4 border-r border-black">
+              <p className="text-xs font-bold uppercase tracking-wider mb-1">BEST DAY</p>
+              <p className="text-sm font-mono text-profit">
                 {new Date(monthStats.bestDay.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </p>
-              <p className="text-lg font-bold text-green-400">
+              <p className="text-lg font-bold font-mono text-profit">
                 {formatCurrency(monthStats.bestDay.amount)}
               </p>
             </div>
           )}
-          {monthStats.worstDay.date && (
-            <div>
-              <p className="text-xs text-gray-400 mb-1">Worst Day</p>
-              <p className="text-sm font-semibold text-red-400">
+          {monthStats.worstDay.date && monthStats.worstDay.amount < Infinity && (
+            <div className="p-4 border-r border-black">
+              <p className="text-xs font-bold uppercase tracking-wider mb-1">WORST DAY</p>
+              <p className="text-sm font-mono text-loss">
                 {new Date(monthStats.worstDay.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </p>
-              <p className="text-lg font-bold text-red-400">
+              <p className="text-lg font-bold font-mono text-loss">
                 {formatCurrency(monthStats.worstDay.amount)}
               </p>
             </div>
           )}
-          <div>
-            <p className="text-xs text-gray-400 mb-1">Avg Daily P&L</p>
-            <p className={`text-lg font-bold ${monthStats.monthDays.length > 0 ? (monthStats.netProfit / monthStats.monthDays.length >= 0 ? 'text-green-400' : 'text-red-400') : 'text-gray-400'}`}>
+          <div className="p-4 border-r border-black">
+            <p className="text-xs font-bold uppercase tracking-wider mb-1">AVG DAILY P&L</p>
+            <p className={`text-lg font-bold font-mono ${monthStats.monthDays.length > 0 ? (monthStats.netProfit / monthStats.monthDays.length >= 0 ? 'text-profit' : 'text-loss') : ''}`}>
               {monthStats.monthDays.length > 0 
                 ? formatCurrency(monthStats.netProfit / monthStats.monthDays.length)
                 : formatCurrency(0)}
             </p>
           </div>
           {monthStats.maxPositiveStreak > 0 && (
-            <div>
-              <p className="text-xs text-gray-400 mb-1">Best Positive Streak</p>
-              <p className="text-lg font-bold text-green-400">
-                {monthStats.maxPositiveStreak} {monthStats.maxPositiveStreak === 1 ? 'day' : 'days'}
+            <div className="p-4">
+              <p className="text-xs font-bold uppercase tracking-wider mb-1">BEST STREAK</p>
+              <p className="text-lg font-bold font-mono text-profit">
+                {monthStats.maxPositiveStreak} {monthStats.maxPositiveStreak === 1 ? 'DAY' : 'DAYS'}
               </p>
             </div>
           )}
@@ -351,4 +347,3 @@ const PNLCalendar = ({ trades = [] }) => {
 }
 
 export default PNLCalendar
-

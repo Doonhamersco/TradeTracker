@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { X, Mail, User as UserIcon, Calendar, Upload, Image as ImageIcon, Check, Edit2, Save, Info } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { uploadImage } from '../services/storageService'
 
@@ -15,7 +14,6 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
   const [displayNameValue, setDisplayNameValue] = useState('')
   const [savingDisplayName, setSavingDisplayName] = useState(false)
 
-  // Initialize display name value when modal opens or userProfile changes
   useEffect(() => {
     if (!isOpen) {
       setIsEditingDisplayName(false)
@@ -55,17 +53,7 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
     if (userProfile?.username) {
       return userProfile.username
     }
-    return 'User'
-  }
-
-  const handleEditDisplayName = () => {
-    setIsEditingDisplayName(true)
-    setDisplayNameValue(getUserDisplayName())
-  }
-
-  const handleCancelEditDisplayName = () => {
-    setIsEditingDisplayName(false)
-    setDisplayNameValue(getUserDisplayName())
+    return 'USER'
   }
 
   const handleSaveDisplayName = async () => {
@@ -85,7 +73,6 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
 
       if (result.success) {
         setIsEditingDisplayName(false)
-        console.log('Display name updated successfully')
       } else {
         alert('Error updating display name: ' + (result.error || 'Unknown error'))
       }
@@ -104,10 +91,8 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
       return new Intl.DateTimeFormat('en-US', {
         year: 'numeric',
         month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }).format(date)
+        day: 'numeric'
+      }).format(date).toUpperCase()
     } catch {
       return 'N/A'
     }
@@ -116,19 +101,16 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
   const handleImageUpload = async (file, type) => {
     if (!file || !currentUser?.uid) return
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       alert('Please upload an image file')
       return
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert('Image size must be less than 5MB')
       return
     }
 
-    // Clear previous errors
     if (type === 'winning') {
       setUploadError({ ...uploadError, winning: null })
       setUploadingWinning(true)
@@ -140,7 +122,6 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
     }
 
     try {
-      // Upload image to Firebase Storage with progress tracking
       const result = await uploadImage(
         file, 
         currentUser.uid, 
@@ -155,9 +136,6 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
       )
       
       if (result.success) {
-        console.log('Upload successful, updating profile...')
-        
-        // Update user profile with image URL
         const updateData = {}
         if (type === 'winning') {
           updateData.winningTradeBackground = result.url
@@ -168,9 +146,6 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
         const updateResult = await updateUserProfile(currentUser.uid, updateData)
         
         if (updateResult.success) {
-          console.log('Profile updated successfully')
-          
-          // Show preview
           const reader = new FileReader()
           reader.onload = (e) => {
             if (type === 'winning') {
@@ -181,7 +156,6 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
           }
           reader.readAsDataURL(file)
           
-          // Reset progress
           if (type === 'winning') {
             setUploadProgress({ ...uploadProgress, winning: 100 })
           } else {
@@ -189,7 +163,6 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
           }
         } else {
           const errorMsg = 'Error updating profile: ' + (updateResult.error || 'Unknown error')
-          console.error(errorMsg)
           if (type === 'winning') {
             setUploadError({ ...uploadError, winning: errorMsg })
           } else {
@@ -198,7 +171,6 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
         }
       } else {
         const errorMsg = 'Error uploading image: ' + (result.error || 'Unknown error')
-        console.error(errorMsg, result)
         if (type === 'winning') {
           setUploadError({ ...uploadError, winning: errorMsg })
         } else {
@@ -206,7 +178,6 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
         }
       }
     } catch (error) {
-      console.error('Error uploading image:', error)
       const errorMsg = 'Error uploading image: ' + (error.message || 'Please try again.')
       if (type === 'winning') {
         setUploadError({ ...uploadError, winning: errorMsg })
@@ -230,39 +201,37 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div 
+      className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
       <div 
-        className="bg-gray-900 rounded-xl shadow-2xl border border-gray-800 w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 animate-in fade-in zoom-in-95 duration-200"
+        className="brutal-section w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-white">Profile ⚙️</h2>
+        <div className="border-b-6 border-black p-6 flex items-center justify-between">
+          <h2 className="brutal-title text-2xl">PROFILE</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors duration-200"
-            aria-label="Close"
+            className="w-10 h-10 border-2 border-black hover:bg-black hover:text-white transition-colors font-bold text-xl"
           >
-            <X className="w-5 h-5 text-gray-400" />
+            ✕
           </button>
         </div>
 
-        {/* Profile Content */}
-        <div className="space-y-4">
+        {/* Content */}
+        <div className="p-6 space-y-4">
           {/* Display Name */}
-          <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+          <div className="border-2 border-black p-4">
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-3">
-                <UserIcon className="w-5 h-5 text-gray-400" />
-                <p className="text-sm text-gray-400">Display Name</p>
-              </div>
+              <p className="brutal-label">DISPLAY NAME</p>
               {!isEditingDisplayName && (
                 <button
-                  onClick={handleEditDisplayName}
-                  className="p-1.5 hover:bg-gray-700 rounded-lg transition-colors"
-                  title="Edit display name"
+                  onClick={() => setIsEditingDisplayName(true)}
+                  className="text-xs font-bold hover:underline"
                 >
-                  <Edit2 className="w-4 h-4 text-gray-400 hover:text-white" />
+                  [EDIT]
                 </button>
               )}
             </div>
@@ -272,8 +241,8 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
                   type="text"
                   value={displayNameValue}
                   onChange={(e) => setDisplayNameValue(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-900 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter display name"
+                  className="brutal-input"
+                  placeholder="ENTER DISPLAY NAME"
                   disabled={savingDisplayName}
                   autoFocus
                 />
@@ -281,94 +250,59 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
                   <button
                     onClick={handleSaveDisplayName}
                     disabled={savingDisplayName || !displayNameValue.trim()}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                    className="brutal-btn text-sm py-2"
                   >
-                    {savingDisplayName ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span>Saving...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Save className="w-4 h-4" />
-                        <span>Save</span>
-                      </>
-                    )}
+                    {savingDisplayName ? 'SAVING...' : 'SAVE'}
                   </button>
                   <button
-                    onClick={handleCancelEditDisplayName}
+                    onClick={() => setIsEditingDisplayName(false)}
                     disabled={savingDisplayName}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:bg-gray-800 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+                    className="brutal-btn brutal-btn-secondary text-sm py-2"
                   >
-                    <X className="w-4 h-4" />
-                    <span>Cancel</span>
+                    CANCEL
                   </button>
                 </div>
               </div>
             ) : (
-              <p className="text-lg font-semibold text-white">{getUserDisplayName()}</p>
+              <p className="text-lg font-bold">{getUserDisplayName()}</p>
             )}
           </div>
 
           {/* Email */}
           {currentUser?.email && (
-            <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-              <div className="flex items-center gap-3 mb-2">
-                <Mail className="w-5 h-5 text-gray-400" />
-                <p className="text-sm text-gray-400">Email</p>
-              </div>
-              <p className="text-lg font-semibold text-white">{currentUser.email}</p>
+            <div className="border-2 border-black p-4">
+              <p className="brutal-label">EMAIL</p>
+              <p className="font-bold">{currentUser.email}</p>
             </div>
           )}
 
           {/* Username */}
           {userProfile?.username && (
-            <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-              <div className="flex items-center gap-3 mb-2">
-                <UserIcon className="w-5 h-5 text-gray-400" />
-                <p className="text-sm text-gray-400">Username</p>
-              </div>
-              <p className="text-lg font-semibold text-white">{userProfile.username}</p>
+            <div className="border-2 border-black p-4">
+              <p className="brutal-label">USERNAME</p>
+              <p className="font-bold">@{userProfile.username}</p>
             </div>
           )}
 
           {/* Account Created */}
           {userProfile?.createdAt && (
-            <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-              <div className="flex items-center gap-3 mb-2">
-                <Calendar className="w-5 h-5 text-gray-400" />
-                <p className="text-sm text-gray-400">Account Created</p>
-              </div>
-              <p className="text-lg font-semibold text-white">{formatDate(userProfile.createdAt)}</p>
+            <div className="border-2 border-black p-4">
+              <p className="brutal-label">ACCOUNT CREATED</p>
+              <p className="font-bold">{formatDate(userProfile.createdAt)}</p>
             </div>
           )}
 
-          {/* PNL Card Backgrounds Section */}
-          <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <ImageIcon className="w-5 h-5 text-blue-400" />
-              PNL Card Backgrounds
-              <div className="relative group">
-                <Info className="w-4 h-4 text-gray-400 hover:text-gray-300 cursor-help transition-colors" />
-                <div className="absolute left-0 bottom-full mb-2 w-80 p-3 bg-gray-900 border border-gray-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 text-sm text-gray-300">
-                  <p className="mb-2">Paste the following prompt into your AI agent:</p>
-                  <p className="text-white font-medium mb-2">"Use this character to create a PNL card like the example provided"</p>
-                  <p className="text-xs text-gray-400">Alongside your profile picture and an example PNL card</p>
-                  {/* Arrow pointing down */}
-                  <div className="absolute top-full left-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-700"></div>
-                </div>
-              </div>
-            </h3>
-            <p className="text-sm text-gray-400 mb-4">
-              Upload custom backgrounds for your shareable PNL cards. Images should be in 4:5 aspect ratio (recommended: 800x1000px).
+          {/* PNL Card Backgrounds */}
+          <div className="border-2 border-black p-4">
+            <h3 className="brutal-label mb-4">PNL CARD BACKGROUNDS</h3>
+            <p className="text-xs text-gray-600 mb-4 uppercase">
+              UPLOAD CUSTOM BACKGROUNDS FOR YOUR SHAREABLE PNL CARDS (800×1000PX RECOMMENDED)
             </p>
 
             <div className="space-y-4">
-              {/* Winning Trade Background */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Winning Trade Background
-                </label>
+              {/* Winning */}
+              <div className="border-2 border-green-700 p-4">
+                <label className="brutal-label text-profit mb-2">WINNING TRADE</label>
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
                     <input
@@ -381,60 +315,29 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
                     />
                     <label
                       htmlFor="winning-upload"
-                      className={`flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors cursor-pointer ${
-                        uploadingWinning ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
+                      className={`brutal-btn block text-center w-full text-sm py-2 ${uploadingWinning ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                     >
-                      {uploadingWinning ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span>Uploading... {Math.round(uploadProgress.winning)}%</span>
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="w-4 h-4" />
-                          <span>{userProfile?.winningTradeBackground ? 'Change' : 'Upload'}</span>
-                        </>
-                      )}
+                      {uploadingWinning ? `UPLOADING ${Math.round(uploadProgress.winning)}%` : 'UPLOAD'}
                     </label>
-                    {uploadProgress.winning > 0 && uploadProgress.winning < 100 && (
-                      <div className="mt-2 w-full bg-gray-700 rounded-full h-2">
-                        <div 
-                          className="bg-green-500 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${uploadProgress.winning}%` }}
-                        ></div>
-                      </div>
-                    )}
                     {uploadError.winning && (
-                      <p className="mt-2 text-sm text-red-400">{uploadError.winning}</p>
+                      <p className="mt-2 text-xs text-loss uppercase">{uploadError.winning}</p>
                     )}
                   </div>
                   {(previewWinning || userProfile?.winningTradeBackground) && (
-                    <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-700">
+                    <div className="w-16 h-20 border-2 border-black overflow-hidden">
                       <img
                         src={previewWinning || userProfile.winningTradeBackground}
-                        alt="Winning background preview"
+                        alt="Preview"
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          console.error('Error loading preview image')
-                          e.target.style.display = 'none'
-                        }}
                       />
-                      {userProfile?.winningTradeBackground && !previewWinning && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                          <Check className="w-6 h-6 text-green-400" />
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Losing Trade Background */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Losing Trade Background
-                </label>
+              {/* Losing */}
+              <div className="border-2 border-red-700 p-4">
+                <label className="brutal-label text-loss mb-2">LOSING TRADE</label>
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
                     <input
@@ -447,50 +350,21 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
                     />
                     <label
                       htmlFor="losing-upload"
-                      className={`flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors cursor-pointer ${
-                        uploadingLosing ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
+                      className={`brutal-btn block text-center w-full text-sm py-2 ${uploadingLosing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                     >
-                      {uploadingLosing ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span>Uploading... {Math.round(uploadProgress.losing)}%</span>
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="w-4 h-4" />
-                          <span>{userProfile?.losingTradeBackground ? 'Change' : 'Upload'}</span>
-                        </>
-                      )}
+                      {uploadingLosing ? `UPLOADING ${Math.round(uploadProgress.losing)}%` : 'UPLOAD'}
                     </label>
-                    {uploadProgress.losing > 0 && uploadProgress.losing < 100 && (
-                      <div className="mt-2 w-full bg-gray-700 rounded-full h-2">
-                        <div 
-                          className="bg-red-500 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${uploadProgress.losing}%` }}
-                        ></div>
-                      </div>
-                    )}
                     {uploadError.losing && (
-                      <p className="mt-2 text-sm text-red-400">{uploadError.losing}</p>
+                      <p className="mt-2 text-xs text-loss uppercase">{uploadError.losing}</p>
                     )}
                   </div>
                   {(previewLosing || userProfile?.losingTradeBackground) && (
-                    <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-700">
+                    <div className="w-16 h-20 border-2 border-black overflow-hidden">
                       <img
                         src={previewLosing || userProfile.losingTradeBackground}
-                        alt="Losing background preview"
+                        alt="Preview"
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          console.error('Error loading preview image')
-                          e.target.style.display = 'none'
-                        }}
                       />
-                      {userProfile?.losingTradeBackground && !previewLosing && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                          <Check className="w-6 h-6 text-red-400" />
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
@@ -499,22 +373,21 @@ const ProfileModal = ({ isOpen, onClose, currentUser, userProfile }) => {
           </div>
 
           {/* User ID */}
-          <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-            <div className="flex items-center gap-3 mb-2">
-              <UserIcon className="w-5 h-5 text-gray-400" />
-              <p className="text-sm text-gray-400">User ID</p>
-            </div>
-            <p className="text-xs font-mono text-gray-300 break-all">{currentUser?.uid}</p>
+          <div className="border-2 border-black p-4">
+            <p className="brutal-label">USER ID</p>
+            <p className="text-xs font-mono break-all">{currentUser?.uid}</p>
           </div>
         </div>
 
         {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="w-full mt-6 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200"
-        >
-          Close
-        </button>
+        <div className="border-t-6 border-black">
+          <button
+            onClick={onClose}
+            className="w-full py-4 font-bold uppercase hover:bg-black hover:text-white transition-colors"
+          >
+            CLOSE
+          </button>
+        </div>
       </div>
     </div>
   )

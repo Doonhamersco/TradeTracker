@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Eye, X as CloseIcon, RefreshCw, MessageSquare, ExternalLink } from 'lucide-react'
 import { updateCurrentPrice, calculateUnrealizedPnL, calculateUnrealizedPnLPercent, calculateRiskReward } from '../services/activeTradesService'
 
 function ActiveTradeCard({ trade, livePrice, onViewDetails, onClosePosition }) {
@@ -7,31 +6,20 @@ function ActiveTradeCard({ trade, livePrice, onViewDetails, onClosePosition }) {
   const [newPrice, setNewPrice] = useState(trade.currentPrice?.toString() || '')
   const [updating, setUpdating] = useState(false)
 
-  // Use live price if available, otherwise fall back to stored currentPrice
   const displayPrice = livePrice || trade.currentPrice
   const hasLivePrice = livePrice !== undefined
 
-  // Calculate P&L using display price
   const unrealizedPnL = calculateUnrealizedPnL(trade.entryPrice, displayPrice, trade.positionSize)
   const unrealizedPnLPercent = calculateUnrealizedPnLPercent(trade.entryPrice, displayPrice)
   const riskReward = calculateRiskReward(trade.entryPrice, trade.targetPrice, trade.stopLoss)
   const isProfit = unrealizedPnL >= 0
 
-  // Calculate days held
   const daysHeld = Math.floor((new Date() - new Date(trade.entryDate)) / (1000 * 60 * 60 * 24))
-  const daysText = daysHeld === 0 ? 'Today' : daysHeld === 1 ? '1 day ago' : `${daysHeld} days ago`
+  const daysText = daysHeld === 0 ? 'TODAY' : daysHeld === 1 ? '1 DAY' : `${daysHeld} DAYS`
 
-  // Calculate position on progress bar (Stop Loss to Target range)
   const range = trade.targetPrice - trade.stopLoss
   const currentPosition = ((displayPrice - trade.stopLoss) / range) * 100
   const entryPosition = ((trade.entryPrice - trade.stopLoss) / range) * 100
-
-  // Category colors
-  const categoryColors = {
-    'Fibonacci': 'bg-purple-600 text-purple-100',
-    'Degen': 'bg-orange-600 text-orange-100',
-    'Conviction': 'bg-blue-600 text-blue-100'
-  }
 
   const handlePriceUpdate = async () => {
     const price = parseFloat(newPrice)
@@ -57,73 +45,66 @@ function ActiveTradeCard({ trade, livePrice, onViewDetails, onClosePosition }) {
   }
 
   return (
-    <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden hover:border-gray-700 transition-colors">
+    <div className="brutal-section">
       {/* Header */}
-      <div className="p-4 border-b border-gray-800">
-        <div className="flex items-start justify-between">
-          <div>
-            <h3 className="text-2xl font-bold text-white">{trade.assetName}</h3>
-            <p className="text-sm text-gray-400">{daysText}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${categoryColors[trade.category] || 'bg-gray-600 text-gray-100'}`}>
-              {trade.category}
-            </span>
-            <span className="px-2 py-1 rounded bg-gray-800 text-xs text-gray-300">
-              R:R {riskReward.toFixed(1)}:1
-            </span>
-          </div>
+      <div className="border-b-2 border-black p-4 flex items-start justify-between">
+        <div>
+          <h3 className="brutal-title text-2xl">{trade.assetName}</h3>
+          <p className="text-xs font-bold uppercase tracking-wider text-gray-500">{daysText}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="border-2 border-black px-2 py-1 text-xs font-bold uppercase">
+            {trade.category}
+          </span>
+          <span className="border-2 border-black px-2 py-1 text-xs font-bold font-mono">
+            R:R {riskReward.toFixed(1)}:1
+          </span>
         </div>
       </div>
 
       {/* Price Section */}
-      <div className="p-4 space-y-3">
+      <div className="p-4 border-b-2 border-black">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-gray-500">Entry</p>
-            <p className="text-white font-medium">{formatPrice(trade.entryPrice)}</p>
+            <p className="brutal-label">ENTRY</p>
+            <p className="font-bold font-mono">{formatPrice(trade.entryPrice)}</p>
           </div>
           <div>
-            <p className="text-gray-500 flex items-center gap-1">
-              Current
+            <p className="brutal-label flex items-center gap-2">
+              CURRENT
               {hasLivePrice ? (
-                <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" title="Live price from CoinGecko" />
+                <span className="w-2 h-2 bg-green-600 rounded-full animate-pulse" title="Live price" />
               ) : (
-                <span className="text-xs text-yellow-500" title="Manual price - not on CoinGecko">⚠️</span>
+                <span className="text-yellow-600 text-[10px]">MANUAL</span>
               )}
             </p>
-            <p className={`font-medium ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+            <p className={`font-bold font-mono ${isProfit ? 'text-profit' : 'text-loss'}`}>
               {formatPrice(displayPrice)}
             </p>
-            {!hasLivePrice && (
-              <p className="text-xs text-yellow-600">Manual</p>
-            )}
           </div>
           <div>
-            <p className="text-gray-500">Target</p>
-            <p className="text-green-400 font-medium">{formatPrice(trade.targetPrice)}</p>
+            <p className="brutal-label text-profit">TARGET</p>
+            <p className="font-bold font-mono text-profit">{formatPrice(trade.targetPrice)}</p>
           </div>
           <div>
-            <p className="text-gray-500">Stop Loss</p>
-            <p className="text-red-400 font-medium">{formatPrice(trade.stopLoss)}</p>
+            <p className="brutal-label text-loss">STOP LOSS</p>
+            <p className="font-bold font-mono text-loss">{formatPrice(trade.stopLoss)}</p>
           </div>
         </div>
 
         {/* Progress Bar */}
-        <div className="relative pt-4">
-          <div className="flex justify-between text-xs text-gray-500 mb-1">
-            <span>SL</span>
-            <span>Target</span>
+        <div className="mt-4 pt-4 border-t-2 border-black">
+          <div className="flex justify-between text-xs font-bold uppercase mb-2">
+            <span className="text-loss">SL</span>
+            <span className="text-profit">TARGET</span>
           </div>
-          <div className="h-2 bg-gray-800 rounded-full overflow-hidden relative">
-            {/* Red zone (below entry) */}
+          <div className="h-3 bg-gray-200 relative border-2 border-black">
             <div 
-              className="absolute h-full bg-red-900/50"
+              className="absolute h-full bg-loss"
               style={{ width: `${Math.min(Math.max(entryPosition, 0), 100)}%` }}
             />
-            {/* Green zone (above entry) */}
             <div 
-              className="absolute h-full bg-green-900/50"
+              className="absolute h-full bg-profit"
               style={{ 
                 left: `${Math.min(Math.max(entryPosition, 0), 100)}%`,
                 width: `${100 - Math.min(Math.max(entryPosition, 0), 100)}%`
@@ -131,12 +112,12 @@ function ActiveTradeCard({ trade, livePrice, onViewDetails, onClosePosition }) {
             />
             {/* Entry marker */}
             <div 
-              className="absolute w-0.5 h-full bg-white"
+              className="absolute w-1 h-full bg-black"
               style={{ left: `${Math.min(Math.max(entryPosition, 0), 100)}%` }}
             />
-            {/* Current position marker */}
+            {/* Current position */}
             <div 
-              className={`absolute w-3 h-3 rounded-full -top-0.5 transform -translate-x-1/2 ${isProfit ? 'bg-green-400' : 'bg-red-400'}`}
+              className={`absolute w-4 h-4 rounded-full border-3 border-black -top-0.5 transform -translate-x-1/2 ${isProfit ? 'bg-profit' : 'bg-loss'}`}
               style={{ left: `${Math.min(Math.max(currentPosition, 0), 100)}%` }}
             />
           </div>
@@ -144,29 +125,29 @@ function ActiveTradeCard({ trade, livePrice, onViewDetails, onClosePosition }) {
       </div>
 
       {/* P&L Section */}
-      <div className={`p-4 ${isProfit ? 'bg-green-900/20' : 'bg-red-900/20'}`}>
+      <div className={`p-4 border-b-2 border-black ${isProfit ? 'bg-green-50' : 'bg-red-50'}`}>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-gray-400">Unrealized P&L</p>
-            <p className={`text-xl font-bold ${isProfit ? 'text-green-400' : 'text-red-400'}`}>
+            <p className="brutal-label">UNREALIZED P&L</p>
+            <p className={`text-2xl font-bold font-mono ${isProfit ? 'text-profit' : 'text-loss'}`}>
               {isProfit ? '+' : ''}{formatCurrency(unrealizedPnL)}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-gray-400">Position Size</p>
-            <p className="text-lg font-semibold text-white">{formatCurrency(trade.positionSize)}</p>
+            <p className="brutal-label">POSITION</p>
+            <p className="text-lg font-bold font-mono">{formatCurrency(trade.positionSize)}</p>
           </div>
-          <div className={`px-3 py-1 rounded-lg ${isProfit ? 'bg-green-600' : 'bg-red-600'}`}>
-            <p className="text-lg font-bold text-white">
-              {isProfit ? '+' : ''}{unrealizedPnLPercent.toFixed(2)}%
+          <div className={`px-4 py-2 ${isProfit ? 'bg-profit' : 'bg-loss'}`}>
+            <p className="text-xl font-bold font-mono text-white">
+              {isProfit ? '+' : ''}{unrealizedPnLPercent.toFixed(1)}%
             </p>
           </div>
         </div>
       </div>
 
-      {/* Update Price Modal Inline */}
+      {/* Update Price Input */}
       {showPriceUpdate && (
-        <div className="p-4 border-t border-gray-800 bg-gray-800/50">
+        <div className="p-4 border-b-2 border-black bg-gray-50">
           <div className="flex gap-2">
             <input
               type="number"
@@ -174,67 +155,66 @@ function ActiveTradeCard({ trade, livePrice, onViewDetails, onClosePosition }) {
               onChange={(e) => setNewPrice(e.target.value)}
               placeholder="New price"
               step="any"
-              className="flex-1 px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="brutal-input flex-1"
               autoFocus
             />
             <button
               onClick={handlePriceUpdate}
               disabled={updating}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
+              className="brutal-btn text-sm py-2"
             >
-              {updating ? '...' : 'Update'}
+              {updating ? '...' : 'UPDATE'}
             </button>
             <button
               onClick={() => setShowPriceUpdate(false)}
-              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
+              className="brutal-btn brutal-btn-secondary text-sm py-2"
             >
-              <CloseIcon className="w-4 h-4" />
+              ✕
             </button>
           </div>
         </div>
       )}
 
       {/* Actions */}
-      <div className="p-4 border-t border-gray-800 flex gap-2">
+      <div className="grid grid-cols-4 border-t-0">
         <button
           onClick={() => setShowPriceUpdate(true)}
-          className="flex-1 flex items-center justify-center gap-1 py-2 px-3 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors"
+          className="p-3 text-xs font-bold uppercase hover:bg-black hover:text-white transition-colors border-r-2 border-black"
         >
-          <RefreshCw className="w-4 h-4" />
-          Update Price
+          ↻ PRICE
         </button>
         <button
           onClick={onViewDetails}
-          className="flex-1 flex items-center justify-center gap-1 py-2 px-3 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition-colors"
+          className="p-3 text-xs font-bold uppercase hover:bg-black hover:text-white transition-colors border-r-2 border-black"
         >
-          <Eye className="w-4 h-4" />
-          Details
+          DETAILS
         </button>
-        {trade.chartLink && (
+        {trade.chartLink ? (
           <a
             href={trade.chartLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="py-2 px-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors"
-            title="View Chart"
+            className="p-3 text-xs font-bold uppercase hover:bg-black hover:text-white transition-colors border-r-2 border-black text-center"
           >
-            <ExternalLink className="w-4 h-4" />
+            CHART ↗
           </a>
+        ) : (
+          <div className="p-3 text-xs font-bold uppercase text-gray-400 border-r-2 border-black text-center">
+            NO CHART
+          </div>
         )}
         <button
           onClick={onClosePosition}
-          className="py-2 px-3 bg-red-600/20 hover:bg-red-600/40 text-red-400 text-sm rounded-lg transition-colors"
-          title="Close Position"
+          className="p-3 text-xs font-bold uppercase text-loss hover:bg-loss hover:text-white transition-colors"
         >
-          <CloseIcon className="w-4 h-4" />
+          CLOSE
         </button>
       </div>
 
       {/* Comments indicator */}
       {trade.comments && trade.comments.length > 0 && (
-        <div className="px-4 pb-3 flex items-center gap-1 text-xs text-gray-500">
-          <MessageSquare className="w-3 h-3" />
-          {trade.comments.length} comment{trade.comments.length !== 1 ? 's' : ''}
+        <div className="px-4 py-2 border-t-2 border-black bg-gray-50 text-xs font-bold uppercase">
+          💬 {trade.comments.length} COMMENT{trade.comments.length !== 1 ? 'S' : ''}
         </div>
       )}
     </div>
@@ -242,4 +222,3 @@ function ActiveTradeCard({ trade, livePrice, onViewDetails, onClosePosition }) {
 }
 
 export default ActiveTradeCard
-

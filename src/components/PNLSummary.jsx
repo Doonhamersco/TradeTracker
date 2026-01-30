@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import { TrendingUp, TrendingDown, DollarSign, Percent } from 'lucide-react'
 
 const PNLSummary = ({ trades = [] }) => {
   const safeTrades = Array.isArray(trades) ? trades : []
@@ -85,100 +84,92 @@ const PNLSummary = ({ trades = [] }) => {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-white mb-6">Overall PNL Summary</h2>
+      <h2 className="brutal-title text-2xl mb-6">OVERALL PNL SUMMARY</h2>
 
       {/* Main Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-          <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="w-5 h-5 text-blue-400" />
-            <p className="text-xs text-gray-400">Net P&L</p>
-          </div>
-          <p className={`text-2xl font-bold ${stats.netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+      <div className="grid grid-cols-2 md:grid-cols-4 border-6 border-black mb-8">
+        <div className="p-6 border-r-2 border-b-2 md:border-b-0 border-black">
+          <p className="brutal-label">NET P&L</p>
+          <p className={`text-2xl font-bold font-mono ${stats.netProfit >= 0 ? 'text-profit' : 'text-loss'}`}>
             {formatCurrency(stats.netProfit)}
           </p>
         </div>
 
-        <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-          <div className="flex items-center gap-2 mb-2">
-            <Percent className="w-5 h-5 text-blue-400" />
-            <p className="text-xs text-gray-400">ROI</p>
-          </div>
-          <p className={`text-2xl font-bold ${stats.roi >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+        <div className="p-6 border-b-2 md:border-b-0 md:border-r-2 border-black">
+          <p className="brutal-label">ROI</p>
+          <p className={`text-2xl font-bold font-mono ${stats.roi >= 0 ? 'text-profit' : 'text-loss'}`}>
             {formatPercent(stats.roi)}
           </p>
         </div>
 
-        <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="w-5 h-5 text-green-400" />
-            <p className="text-xs text-gray-400">Win Rate</p>
-          </div>
-          <p className="text-2xl font-bold text-white">
+        <div className="p-6 border-r-2 border-black">
+          <p className="brutal-label">WIN RATE</p>
+          <p className="text-2xl font-bold font-mono">
             {stats.winRate.toFixed(1)}%
           </p>
         </div>
 
-        <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-          <div className="flex items-center gap-2 mb-2">
-            <DollarSign className="w-5 h-5 text-gray-400" />
-            <p className="text-xs text-gray-400">Total Trades</p>
-          </div>
-          <p className="text-2xl font-bold text-white">
+        <div className="p-6">
+          <p className="brutal-label">TOTAL TRADES</p>
+          <p className="text-2xl font-bold font-mono">
             {stats.totalTrades}
           </p>
         </div>
       </div>
 
       {/* Detailed Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         {/* Wins */}
-        <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-          <h3 className="text-lg font-semibold text-green-400 mb-4">Winning Trades</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Total Wins</span>
-              <span className="text-white font-semibold">{stats.winningTrades}</span>
+        <div className="border-2 border-green-700">
+          <div className="p-4 border-b-2 border-green-700 bg-green-50">
+            <h3 className="brutal-label text-profit">WINNING TRADES</h3>
+          </div>
+          <div className="p-4 space-y-3">
+            <div className="flex justify-between border-b border-black pb-2">
+              <span className="font-bold uppercase text-sm">TOTAL WINS</span>
+              <span className="font-mono font-bold">{stats.winningTrades}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Total Profit</span>
-              <span className="text-green-400 font-semibold">{formatCurrency(stats.totalProfit)}</span>
+            <div className="flex justify-between border-b border-black pb-2">
+              <span className="font-bold uppercase text-sm">TOTAL PROFIT</span>
+              <span className="font-mono font-bold text-profit">{formatCurrency(stats.totalProfit)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Average Win</span>
-              <span className="text-green-400 font-semibold">{formatCurrency(stats.avgWin)}</span>
+            <div className="flex justify-between border-b border-black pb-2">
+              <span className="font-bold uppercase text-sm">AVERAGE WIN</span>
+              <span className="font-mono font-bold text-profit">{formatCurrency(stats.avgWin)}</span>
             </div>
             {stats.bestTrade.profit !== -Infinity && (
-              <div className="pt-3 border-t border-gray-700">
-                <p className="text-xs text-gray-400 mb-1">Best Trade</p>
-                <p className="text-green-400 font-semibold">{formatCurrency(stats.bestTrade.profit)}</p>
-                <p className="text-sm text-gray-400">{stats.bestTrade.coinName}</p>
+              <div className="pt-2">
+                <p className="brutal-label">BEST TRADE</p>
+                <p className="font-mono font-bold text-profit">{formatCurrency(stats.bestTrade.profit)}</p>
+                <p className="text-sm text-gray-600">{stats.bestTrade.coinName}</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Losses */}
-        <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-          <h3 className="text-lg font-semibold text-red-400 mb-4">Losing Trades</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-400">Total Losses</span>
-              <span className="text-white font-semibold">{stats.losingTrades}</span>
+        <div className="border-2 border-red-700">
+          <div className="p-4 border-b-2 border-red-700 bg-red-50">
+            <h3 className="brutal-label text-loss">LOSING TRADES</h3>
+          </div>
+          <div className="p-4 space-y-3">
+            <div className="flex justify-between border-b border-black pb-2">
+              <span className="font-bold uppercase text-sm">TOTAL LOSSES</span>
+              <span className="font-mono font-bold">{stats.losingTrades}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Total Loss</span>
-              <span className="text-red-400 font-semibold">{formatCurrency(stats.totalLoss)}</span>
+            <div className="flex justify-between border-b border-black pb-2">
+              <span className="font-bold uppercase text-sm">TOTAL LOSS</span>
+              <span className="font-mono font-bold text-loss">{formatCurrency(stats.totalLoss)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Average Loss</span>
-              <span className="text-red-400 font-semibold">{formatCurrency(stats.avgLoss)}</span>
+            <div className="flex justify-between border-b border-black pb-2">
+              <span className="font-bold uppercase text-sm">AVERAGE LOSS</span>
+              <span className="font-mono font-bold text-loss">{formatCurrency(stats.avgLoss)}</span>
             </div>
             {stats.worstTrade.profit !== Infinity && (
-              <div className="pt-3 border-t border-gray-700">
-                <p className="text-xs text-gray-400 mb-1">Worst Trade</p>
-                <p className="text-red-400 font-semibold">{formatCurrency(stats.worstTrade.profit)}</p>
-                <p className="text-sm text-gray-400">{stats.worstTrade.coinName}</p>
+              <div className="pt-2">
+                <p className="brutal-label">WORST TRADE</p>
+                <p className="font-mono font-bold text-loss">{formatCurrency(stats.worstTrade.profit)}</p>
+                <p className="text-sm text-gray-600">{stats.worstTrade.coinName}</p>
               </div>
             )}
           </div>
@@ -186,20 +177,22 @@ const PNLSummary = ({ trades = [] }) => {
       </div>
 
       {/* Capital Stats */}
-      <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-        <h3 className="text-lg font-semibold text-white mb-4">Capital Overview</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <p className="text-xs text-gray-400 mb-1">Total Entry</p>
-            <p className="text-xl font-bold text-white">{formatCurrency(stats.totalEntry)}</p>
+      <div className="border-2 border-black">
+        <div className="p-4 border-b-2 border-black">
+          <h3 className="brutal-label">CAPITAL OVERVIEW</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3">
+          <div className="p-4 border-r border-black">
+            <p className="brutal-label">TOTAL ENTRY</p>
+            <p className="text-xl font-bold font-mono">{formatCurrency(stats.totalEntry)}</p>
           </div>
-          <div>
-            <p className="text-xs text-gray-400 mb-1">Total Exit</p>
-            <p className="text-xl font-bold text-white">{formatCurrency(stats.totalExit)}</p>
+          <div className="p-4 border-r border-black">
+            <p className="brutal-label">TOTAL EXIT</p>
+            <p className="text-xl font-bold font-mono">{formatCurrency(stats.totalExit)}</p>
           </div>
-          <div>
-            <p className="text-xs text-gray-400 mb-1">Net Return</p>
-            <p className={`text-xl font-bold ${stats.netProfit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          <div className="p-4">
+            <p className="brutal-label">NET RETURN</p>
+            <p className={`text-xl font-bold font-mono ${stats.netProfit >= 0 ? 'text-profit' : 'text-loss'}`}>
               {formatCurrency(stats.netProfit)}
             </p>
           </div>
@@ -210,4 +203,3 @@ const PNLSummary = ({ trades = [] }) => {
 }
 
 export default PNLSummary
-

@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import { BarChart3, Target } from 'lucide-react'
 
 const WinRateStats = ({ trades = [] }) => {
   const safeTrades = Array.isArray(trades) ? trades : []
@@ -29,7 +28,6 @@ const WinRateStats = ({ trades = [] }) => {
       }
     })
 
-    // Calculate win rates
     Object.keys(categoryStats).forEach(category => {
       const stats = categoryStats[category]
       stats.winRate = stats.total > 0 ? (stats.wins / stats.total) * 100 : 0
@@ -64,103 +62,102 @@ const WinRateStats = ({ trades = [] }) => {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-white mb-6">Win Rate Analysis</h2>
+      <h2 className="brutal-title text-2xl mb-6">WIN RATE ANALYSIS</h2>
 
       {/* Overall Win Rate */}
-      <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700 mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Target className="w-6 h-6 text-blue-400" />
-          <h3 className="text-xl font-semibold text-white">Overall Performance</h3>
+      <div className="border-6 border-black mb-8">
+        <div className="border-b-2 border-black p-4">
+          <h3 className="brutal-title text-xl">OVERALL PERFORMANCE</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <p className="text-xs text-gray-400 mb-1">Win Rate</p>
-            <p className="text-3xl font-bold text-green-400">
+        <div className="grid grid-cols-2 md:grid-cols-4">
+          <div className="p-4 border-r-2 border-b-2 md:border-b-0 border-black">
+            <p className="brutal-label">WIN RATE</p>
+            <p className="text-3xl font-bold font-mono text-profit">
               {stats.overallWinRate.toFixed(1)}%
             </p>
           </div>
-          <div>
-            <p className="text-xs text-gray-400 mb-1">Total Wins</p>
-            <p className="text-2xl font-bold text-green-400">{stats.totalWins}</p>
+          <div className="p-4 border-b-2 md:border-b-0 md:border-r-2 border-black">
+            <p className="brutal-label">TOTAL WINS</p>
+            <p className="text-2xl font-bold font-mono text-profit">{stats.totalWins}</p>
           </div>
-          <div>
-            <p className="text-xs text-gray-400 mb-1">Total Losses</p>
-            <p className="text-2xl font-bold text-red-400">{stats.totalLosses}</p>
+          <div className="p-4 border-r-2 border-black">
+            <p className="brutal-label">TOTAL LOSSES</p>
+            <p className="text-2xl font-bold font-mono text-loss">{stats.totalLosses}</p>
           </div>
-          <div>
-            <p className="text-xs text-gray-400 mb-1">Total Trades</p>
-            <p className="text-2xl font-bold text-white">{stats.totalTrades}</p>
+          <div className="p-4">
+            <p className="brutal-label">TOTAL TRADES</p>
+            <p className="text-2xl font-bold font-mono">{stats.totalTrades}</p>
           </div>
         </div>
         {stats.totalTrades > 0 && (
-          <div className="mt-4 h-3 bg-gray-700 rounded-full overflow-hidden flex">
+          <div className="h-4 flex border-t-2 border-black">
             <div 
-              className="bg-green-500 h-full transition-all duration-300"
+              className="bg-profit h-full"
               style={{ width: `${stats.overallWinRate}%` }}
-            ></div>
+            />
             <div 
-              className="bg-red-500 h-full transition-all duration-300"
+              className="bg-loss h-full"
               style={{ width: `${100 - stats.overallWinRate}%` }}
-            ></div>
+            />
           </div>
         )}
       </div>
 
       {/* Category Breakdown */}
       <div>
-        <h3 className="text-xl font-semibold text-white mb-4">Performance by Category</h3>
+        <h3 className="brutal-title text-xl mb-4">PERFORMANCE BY CATEGORY</h3>
         <div className="space-y-4">
           {categories.length > 0 ? (
             categories.map(category => {
               const categoryData = stats.categoryStats[category]
               return (
-                <div key={category} className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-lg font-semibold text-white">{category}</h4>
-                    <span className="text-sm text-gray-400">{categoryData.total} trades</span>
+                <div key={category} className="border-2 border-black">
+                  <div className="flex items-center justify-between p-4 border-b-2 border-black">
+                    <h4 className="font-bold uppercase">{category}</h4>
+                    <span className="text-sm font-mono">{categoryData.total} TRADES</span>
                   </div>
                   
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                    <div>
-                      <p className="text-xs text-gray-400 mb-1">Win Rate</p>
-                      <p className={`text-xl font-bold ${categoryData.winRate >= 50 ? 'text-green-400' : 'text-red-400'}`}>
+                  <div className="grid grid-cols-2 md:grid-cols-4">
+                    <div className="p-4 border-r border-b md:border-b-0 border-black">
+                      <p className="brutal-label">WIN RATE</p>
+                      <p className={`text-xl font-bold font-mono ${categoryData.winRate >= 50 ? 'text-profit' : 'text-loss'}`}>
                         {categoryData.winRate.toFixed(1)}%
                       </p>
                     </div>
-                    <div>
-                      <p className="text-xs text-gray-400 mb-1">Wins</p>
-                      <p className="text-lg font-semibold text-green-400">{categoryData.wins}</p>
+                    <div className="p-4 border-b md:border-b-0 md:border-r border-black">
+                      <p className="brutal-label">WINS</p>
+                      <p className="text-lg font-bold font-mono text-profit">{categoryData.wins}</p>
                     </div>
-                    <div>
-                      <p className="text-xs text-gray-400 mb-1">Losses</p>
-                      <p className="text-lg font-semibold text-red-400">{categoryData.losses}</p>
+                    <div className="p-4 border-r border-black">
+                      <p className="brutal-label">LOSSES</p>
+                      <p className="text-lg font-bold font-mono text-loss">{categoryData.losses}</p>
                     </div>
-                    <div>
-                      <p className="text-xs text-gray-400 mb-1">Net P&L</p>
-                      <p className={`text-lg font-semibold ${categoryData.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <div className="p-4">
+                      <p className="brutal-label">NET P&L</p>
+                      <p className={`text-lg font-bold font-mono ${categoryData.profit >= 0 ? 'text-profit' : 'text-loss'}`}>
                         {formatCurrency(categoryData.profit)}
                       </p>
                     </div>
                   </div>
 
                   {categoryData.total > 0 && (
-                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden flex">
+                    <div className="h-3 flex border-t-2 border-black">
                       <div 
-                        className="bg-green-500 h-full transition-all duration-300"
+                        className="bg-profit h-full"
                         style={{ width: `${categoryData.winRate}%` }}
-                      ></div>
+                      />
                       <div 
-                        className="bg-red-500 h-full transition-all duration-300"
+                        className="bg-loss h-full"
                         style={{ width: `${100 - categoryData.winRate}%` }}
-                      ></div>
+                      />
                     </div>
                   )}
                 </div>
               )
             })
           ) : (
-            <div className="text-center py-8 text-gray-400">
-              <p>No trades to analyze yet.</p>
+            <div className="border-2 border-black p-8 text-center">
+              <p className="font-bold uppercase">NO TRADES TO ANALYZE YET</p>
             </div>
           )}
         </div>
@@ -170,4 +167,3 @@ const WinRateStats = ({ trades = [] }) => {
 }
 
 export default WinRateStats
-
